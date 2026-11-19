@@ -178,6 +178,8 @@ footer{text-align:center;color:var(--mut);font-size:12px;padding:20px 0 0;font-f
       <option value="">Elige…</option><option>HUEVO ROTO</option><option>HUEVO RAJADO</option><option>HUEVO EN MAL ESTADO</option><option>HUEVO SUCIO / CON EXCREMENTO</option><option>HUEVO CON HONGOS</option><option>HUEVO CON GUSANOS</option><option>PRODUCTO EQUIVOCADO</option><option value="__otro">Otro…</option></select>
       <input type="text" id="motOtro" class="oculto" placeholder="Escribe el motivo" style="margin-top:6px"></div>
     <div class="f" id="fFll"><span>Fecha que llegó <em>*</em></span><input type="date" id="fLl"></div>
+    <div class="f" id="fTel2"><span>Teléfono 2 (si el cliente tiene otro número)</span><input type="tel" id="tel2" inputmode="numeric" maxlength="11" placeholder="9 dígitos"></div>
+    <div class="f" id="fDir2"><span>Dirección 2 (si la dirección cambió o es distinta)</span><input type="text" id="dir2" placeholder="Ej.: Av. Los Olivos 123, Mz B Lt 4"></div>
     <div class="f" id="fVol"><span>Volumen de compra <em>*</em></span><input type="text" id="vol" placeholder="Ej.: 5 jabas semanal"></div>
     <div class="f"><span>Observación (opcional)</span><textarea id="obs" rows="2"></textarea></div>
   </div>
@@ -297,6 +299,8 @@ const KEYS=[
  ['cod','(cod(igo)?\\.? ?(de )?cliente|cod\\.? ?cli)'],
  ['cliente','(no[nm]bre( o)?( raz[oó]n)?( soci\\S*)?( (i?del) cliente)?|raz[oó]n social|clien?t?e)'],
  ['doc','(dni o ruc|dni\\/ruc|d\\.?n\\.?i\\.?|ruc)'],
+ ['dir2','(direcci[oó]n ?(2|nueva|actual)|nueva direcci[oó]n)'],
+ ['tel2','((tel[eé]fono|celular) ?(2|nuevo|actual)|nuevo (tel[eé]fono|celular))'],
  ['direccion','(direcci[oó]n( exacta)?|detecci[oó]n)'],
  ['distrito','(distrito)'],
  ['telefono','(tel[eé]fono( de contacto)?|celular|contacto|fono|n[°º]? ?de ?tl?f\\S*)'],
@@ -544,12 +548,12 @@ function procesar(msgs, M, D, cfg){
       const row={fecha:r.ts, sup:r.who, cliente_chat:(f.cliente||[])[0]||'', doc:r.cli.doc, metodo:r.cli.met,
         prod_chat:p, cant_chat:c, kardex:kd.k, producto:kd.n, unidades:u, motivo:(f.motivo||[]).slice(0,2).join(' '),
         fecha_llego:(f.fecha||[])[0]||'', volumen:(f.volumen||[]).join(' '), obs:(f.obs||[]).join(' '), vend_chat:vchat,
-        estado:e.e, por:e.por, f_resp:e.ts, enlace:e.enl, alertas:[], errores:[], body:r.body, file:r.file};
+        estado:e.e, por:e.por, f_resp:e.ts, enlace:e.enl, tel2:((f.tel2||[])[0]||'').replace(/[^\d+ ]/g,'').trim(), dir2:(f.dir2||[]).join(' '), alertas:[], errores:[], body:r.body, file:r.file};
       if(/sin recojo/i.test(r.body)) row.obs=(row.obs?row.obs+' · ':'')+'SIN RECOJO';
       if(cli){
         const v=D.get(String(cli.vend).trim());
         Object.assign(row,{cod:cli.cod, cliente:cli.nom, lat:cli.lat, lon:cli.lon, oficina:cli.ofi, sede:sede(cli.ofi), zona:cli.zona, ruta:cli.ruta,
-          estado_cli:cli.est, sap_vend:cli.vend, vendedor:v?v.nom:'', jefe:v?v.jefe:'', tel:cli.tel||''});
+          estado_cli:cli.est, sap_vend:cli.vend, vendedor:v?v.nom:'', jefe:v?v.jefe:'', tel:cli.tel||'', dir:cli.dir||''});
         if(!v) row.alertas.push('VENDEDOR NO ESTÁ EN DIARIO');
         if(sapChat){ if(String(cli.vend).trim()!==sapChat) row.alertas.push('SAP VENDEDOR ≠ MAESTRO'); }
         else if(v && vchat){ const a=new Set(norm(vchat).split(' ')), b=new Set(norm(v.nom).split(' ')); if(![...a].some(t=>t.length>2&&b.has(t))) row.alertas.push('VENDEDOR CHAT ≠ MAESTRO'); }
@@ -706,7 +710,7 @@ function elegir(c){
 const hoyISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 function nuevo(){
   V.intento=false;
-  ['vBusca','c1','c2','motOtro','vol','obs'].forEach(i=>$(i).value='');
+  ['vBusca','c1','c2','motOtro','vol','obs','tel2','dir2'].forEach(i=>$(i).value='');
   ['p1','p2','mot'].forEach(i=>$(i).value='');unidOpts('u1','');unidOpts('u2','');
   $('motOtro').classList.add('oculto');$('dP2').open=false;$('fLl').value=hoyISO();$('fLl').max=hoyISO();
   elegir(null);eqTxt(1);eqTxt(2);
@@ -715,7 +719,7 @@ $('vNuevo').onclick=nuevo;
 ['p1','p2'].forEach((i,k)=>$(i).onchange=()=>{unidOpts('u'+(k+1),$(i).value);eqTxt(k+1);armar();});
 ['c1','u1','c2','u2'].forEach(i=>$(i).oninput=$(i).onchange=()=>{eqTxt(1);eqTxt(2);armar();});
 $('mot').onchange=()=>{$('motOtro').classList.toggle('oculto',$('mot').value!=='__otro');armar();};
-['motOtro','fLl','vol','obs'].forEach(i=>$(i).oninput=armar);
+['motOtro','fLl','vol','obs','tel2','dir2'].forEach(i=>$(i).oninput=armar);
 
 let MSG='',FALTA=[];
 function armar(){
@@ -729,6 +733,8 @@ function armar(){
   req(!!mot,'fMot','motivo');
   req(!!$('fLl').value,'fFll','fecha que llegó');
   req(!!$('vol').value.trim(),'fVol','volumen de compra');
+  const tel2=$('tel2').value.replace(/\D/g,''), dir2=$('dir2').value.trim().replace(/\s+/g,' ').toUpperCase();
+  req(!tel2||tel2.length===9,'fTel2','teléfono 2 (9 dígitos)');
   const u2=unids(2);
   const nm=k=>{const x=CAT.find(z=>z[0]===k);return x?k+' '+x[1]:'';};
   const fd=$('fLl').value?$('fLl').value.split('-').reverse().join('/'):'';
@@ -739,6 +745,8 @@ function armar(){
   if($('p2').value&&u2) L.push('PRODUCTO 2: '+nm($('p2').value),'CANTIDAD 2: '+u2+' UNIDADES');
   L.push('MOTIVO: '+mot,'FECHA QUE LLEGÓ: '+fd,'VOLUMEN DE COMPRA: '+$('vol').value.trim().toUpperCase(),
     'VENDEDOR (SAP): '+(V.yo?V.yo.sap:''));
+  if(tel2) L.push('TELEFONO 2: '+tel2);
+  if(dir2) L.push('DIRECCION 2: '+dir2);
   const o=$('obs').value.trim(); if(o) L.push('OBS: '+o.replace(/\n+/g,' '));
   MSG=L.join('\n');
   $('vPrev').textContent=MSG;
@@ -761,7 +769,7 @@ $('aForm').onsubmit=async e=>{
   if(!A){$('aErr').textContent='Contraseña incorrecta.';return;}
   $('aErr').textContent=''; ADMPW=$('aPw').value;
   VEN=new Map(A.ven.map(v=>[String(v[0]),{sap:String(v[0]),nom:v[1],jefe:v[2]}]));
-  CLI=A.cl.map(c=>({cod:String(c[0]),nom:c[1],doc:c[2],est:c[3],ofi:c[4],zona:c[5],ruta:c[6],vend:String(c[7]),lat:c[8],lon:c[9],tel:c[10]||''}));
+  CLI=A.cl.map(c=>({cod:String(c[0]),nom:c[1],doc:c[2],est:c[3],ofi:c[4],zona:c[5],ruta:c[6],vend:String(c[7]),lat:c[8],lon:c[9],tel:c[10]||'',dir:c[11]||''}));
   $('hSub').textContent='Administración';
   $('padInfo').textContent=`Padrón actual: ${CLI.length.toLocaleString()} clientes, ${P.nv||0} vendedores con DNI (actualizado ${P.gen}).`;
   ver('pAdm');
@@ -792,7 +800,7 @@ function mejorHoja(wb,alias,req,pref){
   return best;
 }
 const hojaMaestro=wb=>{const b=mejorHoja(wb,CORE.ALIAS,['cod','nom'],/^(maestro|mae)$/i);return b&&b.name;};
-const MP=()=>CORE.buildMaestro([['COD_DESTINATARIO','NOMBRE','NUM. DOCUMENTO','X','Y','OFICINA','ZONA','RUTA','ESTADO','COD.VENDEDOR','DIRECCION','TELEFONO'],...CLI.map(c=>[c.cod,c.nom,c.doc,c.lon,c.lat,c.ofi,c.zona,c.ruta,c.est,c.vend,'',c.tel])]);
+const MP=()=>CORE.buildMaestro([['COD_DESTINATARIO','NOMBRE','NUM. DOCUMENTO','X','Y','OFICINA','ZONA','RUTA','ESTADO','COD.VENDEDOR','DIRECCION','TELEFONO'],...CLI.map(c=>[c.cod,c.nom,c.doc,c.lon,c.lat,c.ofi,c.zona,c.ruta,c.est,c.vend,c.dir,c.tel])]);
 const DP=()=>CORE.buildDiario([['SAP','NOMBRES COMPLETOS','JEFE INMEDIATO','ZONA','RUTA','PUESTO'],...[...VEN.values()].map(v=>[v.sap,v.nom,v.jefe,'','',''])]);
 
 drop($('dChat'),$('fChat'),async files=>{
@@ -850,9 +858,9 @@ function render(){
 }
 function tabla(){
   const F=filtradas();
-  const H=['#','Fecha','Enviado por','Cód. cliente','Cliente (maestro)','Teléfono','Cruce','Sede','Zona / Ruta','Vendedor (DIARIO)','Vendedor (chat)','KARDEX','Producto','Cantidad','Und','Motivo','Llegó','Alertas','Mensaje'];
+  const H=['#','Fecha','Enviado por','Cód. cliente','Cliente (maestro)','Teléfono 1','Teléfono 2','Dirección 1','Dirección 2','Cruce','Sede','Zona / Ruta','Vendedor (DIARIO)','Vendedor (chat)','KARDEX','Producto','Cantidad','Und','Motivo','Llegó','Alertas','Mensaje'];
   $('tbl').innerHTML='<thead><tr>'+H.map(h=>`<th>${h}</th>`).join('')+'</tr></thead><tbody>'+F.slice(0,1500).map(r=>`<tr class="${r.errores.length?'e':''} ${r.dup?'d':''}">
-    <td>${r.n}</td><td>${fdt(r.fecha)}</td><td>${esc(r.sup)}</td><td>${esc(r.cod)}</td><td>${esc(r.cliente)}</td><td>${esc(r.tel)}</td><td>${esc(r.metodo)}</td>
+    <td>${r.n}</td><td>${fdt(r.fecha)}</td><td>${esc(r.sup)}</td><td>${esc(r.cod)}</td><td>${esc(r.cliente)}</td><td>${esc(r.tel)}</td><td>${esc(r.tel2)}</td><td>${esc(r.dir)}</td><td>${esc(r.dir2)}</td><td>${esc(r.metodo)}</td>
     <td>${esc(r.sede)}</td><td>${esc(r.zona)} ${esc(r.ruta)}</td><td>${esc(r.vendedor)}</td><td>${esc(r.vend_chat)}</td><td>${esc(r.kardex)}</td><td>${esc(r.producto)}</td>
     <td>${esc(r.cant_chat)}</td><td>${r.unidades??''}</td><td>${esc(r.motivo)}</td><td>${esc(r.fecha_llego)}</td>
     <td>${r.errores.map(x=>`<span class="pill er">${esc(x)}</span>`).join('')}${r.alertas.map(x=>`<span class="pill al">${esc(x)}</span>`).join('')}</td>
@@ -874,17 +882,17 @@ document.querySelectorAll('#resTabs .tab').forEach(t=>t.onclick=()=>{document.qu
 $('bXls').onclick=()=>{
   const R=S.R.rows, U=R.filter(r=>!r.dup);
   const al=r=>[...r.errores,...r.alertas].join(', ');
-  const cons=[['FECHA','Código cliente','Cliente','Vendedor','numero de huevos rotos','KARDEX','Producto','LAT','LONG','SEDE','N° DE TELEFONO','OBSERVACION','ALERTAS']]
-    .concat(U.map(r=>[r.fecha,r.cod??'',r.cliente||r.cliente_chat,r.vendedor||r.vend_chat,r.unidades??r.cant_chat,r.kardex,r.producto,r.lat??'',r.lon??'',r.sede??'',r.tel??'',r.obs,al(r)]));
-  const det=[['#','Fecha solicitud','Enviado por','Cliente (chat)','DNI/RUC (chat)','Método cruce','Cód. cliente','Cliente (maestro)','Teléfono (maestro)','Estado cliente','Oficina','Sede','Zona','Ruta','SAP vendedor','Vendedor (DIARIO)','Vendedor (chat)','Jefe','Producto (chat)','KARDEX','Producto','Cantidad (chat)','Unidades','Motivo','Fecha llegó','Volumen compra','LAT','LONG','Reenvío','Errores','Alertas','Observación','Archivo']]
-    .concat(R.map(r=>[r.n,r.fecha,r.sup,r.cliente_chat,r.doc,r.metodo,r.cod??'',r.cliente??'',r.tel??'',r.estado_cli??'',r.oficina??'',r.sede??'',r.zona??'',r.ruta??'',r.sap_vend??'',r.vendedor??'',r.vend_chat,r.jefe??'',r.prod_chat,r.kardex,r.producto,r.cant_chat,r.unidades??'',r.motivo,r.fecha_llego,r.volumen,r.lat??'',r.lon??'',r.dup?'SÍ':'',r.errores.join(', '),r.alertas.join(', '),r.obs,r.file]));
+  const cons=[['FECHA','Código cliente','Cliente','Vendedor','numero de huevos rotos','KARDEX','Producto','LAT','LONG','SEDE','TELEFONO 1','TELEFONO 2','DIRECCION 1','DIRECCION 2','OBSERVACION','ALERTAS']]
+    .concat(U.map(r=>[r.fecha,r.cod??'',r.cliente||r.cliente_chat,r.vendedor||r.vend_chat,r.unidades??r.cant_chat,r.kardex,r.producto,r.lat??'',r.lon??'',r.sede??'',r.tel??'',r.tel2??'',r.dir??'',r.dir2??'',r.obs,al(r)]));
+  const det=[['#','Fecha solicitud','Enviado por','Cliente (chat)','DNI/RUC (chat)','Método cruce','Cód. cliente','Cliente (maestro)','Teléfono 1 (maestro)','Teléfono 2 (vendedor)','Dirección 1 (maestro)','Dirección 2 (vendedor)','Estado cliente','Oficina','Sede','Zona','Ruta','SAP vendedor','Vendedor (DIARIO)','Vendedor (chat)','Jefe','Producto (chat)','KARDEX','Producto','Cantidad (chat)','Unidades','Motivo','Fecha llegó','Volumen compra','LAT','LONG','Reenvío','Errores','Alertas','Observación','Archivo']]
+    .concat(R.map(r=>[r.n,r.fecha,r.sup,r.cliente_chat,r.doc,r.metodo,r.cod??'',r.cliente??'',r.tel??'',r.tel2??'',r.dir??'',r.dir2??'',r.estado_cli??'',r.oficina??'',r.sede??'',r.zona??'',r.ruta??'',r.sap_vend??'',r.vendedor??'',r.vend_chat,r.jefe??'',r.prod_chat,r.kardex,r.producto,r.cant_chat,r.unidades??'',r.motivo,r.fecha_llego,r.volumen,r.lat??'',r.lon??'',r.dup?'SÍ':'',r.errores.join(', '),r.alertas.join(', '),r.obs,r.file]));
   const by={}; U.forEach(r=>{(by[r.sup]=by[r.sup]||[0,0,0]);const v=by[r.sup];v[0]++;v[1]+=r.unidades||0;if(r.errores.length)v[2]++;});
   const res=[['Enviado por','Filas','Huevos','Con error']].concat(Object.entries(by).map(([k,v])=>[k,...v]));
   res.push([],['Mensajes leídos',S.R.nMsgs],['Solicitudes detectadas',S.R.nReqs],['Reenvíos omitidos',R.length-U.length],['Generado',new Date()],['Desarrollado por: Carlos Burga Vasquez']);
   const wb=XLSX.utils.book_new();
   const mk=(rows,w)=>{const ws=XLSX.utils.aoa_to_sheet(rows,{cellDates:true,dateNF:'dd/mm/yyyy hh:mm'});ws['!cols']=w.map(x=>({wch:x}));ws['!autofilter']={ref:ws['!ref']};return ws;};
-  XLSX.utils.book_append_sheet(wb,mk(cons,[16,12,34,28,18,12,34,12,12,8,14,16,40]),'CAMBIO MANO A MANO');
-  XLSX.utils.book_append_sheet(wb,mk(det,[5,16,20,28,13,14,11,32,14,12,16,7,12,8,10,28,22,20,26,12,32,18,8,30,12,22,11,11,7,28,40,16,30]),'DETALLE');
+  XLSX.utils.book_append_sheet(wb,mk(cons,[16,12,34,28,18,12,34,12,12,8,13,13,40,40,16,40]),'CAMBIO MANO A MANO');
+  XLSX.utils.book_append_sheet(wb,mk(det,[5,16,20,28,13,14,11,32,14,14,40,40,12,16,7,12,8,10,28,22,20,26,12,32,18,8,30,12,22,11,11,7,28,40,16,30]),'DETALLE');
   XLSX.utils.book_append_sheet(wb,mk(res,[30,8,10,10]),'RESUMEN');
   const d=new Date();
   XLSX.writeFile(wb,`CAMBIO_MANO_A_MANO_${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(2)}.xlsx`);
@@ -932,7 +940,7 @@ $('bPad').onclick=async()=>{
   const rhS=new Set(PD.rh.map.map(x=>x[1]));
   // vendedor del cliente: COD.VENDEDOR del maestro; si el maestro no lo trae, se toma por RUTA desde el DIARIO
   const vendDe=c=>{const v=String(c.vend??'').trim(); if(v) return v; const s=PD.rh.porRuta.get(CORE.norm(c.ruta)); return s&&s!=='__DUP__'?s:'';};
-  const cl=PD.mae.list.filter(c=>!CORE.INACTIVO.test(c.est)).map(c=>[String(c.cod),c.nom,c.doc,c.est,c.ofi,c.zona,c.ruta,vendDe(c),c.lat,c.lon,c.tel||'']).filter(c=>rhS.has(c[7]));
+  const cl=PD.mae.list.filter(c=>!CORE.INACTIVO.test(c.est)).map(c=>[String(c.cod),c.nom,c.doc,c.est,c.ofi,c.zona,c.ruta,vendDe(c),c.lat,c.lon,c.tel||'',String(c.dir||'').trim()]).filter(c=>rhS.has(c[7]));
   const sinVend=PD.mae.list.filter(c=>!CORE.INACTIVO.test(c.est)).length-cl.length;
   if(cl.length<50){ $('hPad').textContent=`Solo ${cl.length} clientes quedaron con vendedor; no se guardó para no dejar a los vendedores sin padrón. Revisa los archivos.`; $('bPad').disabled=false; return; }
   if(!cl.length){ $('hPad').textContent='No se pudo asignar ningún cliente a un vendedor: revisa que el maestro tenga COD.VENDEDOR o RUTA, y que el DIARIO tenga RUTA, SAP y DNI.'; $('bPad').disabled=false; return; }
