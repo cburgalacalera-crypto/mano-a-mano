@@ -897,6 +897,9 @@ drop($('dPM'),$('fPM'),async files=>{
   // se pueden cargar varios maestros a la vez (p. ej. Lima y provincias); se juntan sin repetir códigos
   setSt('sPM','Leyendo (puede tardar unos segundos)…');
   const porCod=new Map(), partes=[], errores=[]; let ok=0;
+  // si un cliente está en dos archivos, gana el más reciente: fecha del nombre (dd.mm.aa) o, si no tiene, la fecha del archivo
+  const fechaDe=f=>{const m=f.name.match(/(\d{1,2})[.\-_ ](\d{1,2})[.\-_ ](\d{2,4})/);if(m){const y=+m[3]<100?2000+ +m[3]:+m[3];return new Date(y,+m[2]-1,+m[1]).getTime();}return f.lastModified||0;};
+  files=[...files].sort((a,b)=>fechaDe(a)-fechaDe(b));
   for(const f of files){
     try{ const wb=await readXlsx(f); const name=hojaMaestro(wb); if(!name) throw new Error('no encontré una hoja con código y nombre del cliente');
       const m=CORE.buildMaestro(sheetRows(wb,name)), k=m.cols;
@@ -931,6 +934,7 @@ $('bPad').onclick=async()=>{
   const vendDe=c=>{const v=String(c.vend??'').trim(); if(v) return v; const s=PD.rh.porRuta.get(CORE.norm(c.ruta)); return s&&s!=='__DUP__'?s:'';};
   const cl=PD.mae.list.filter(c=>!CORE.INACTIVO.test(c.est)).map(c=>[String(c.cod),c.nom,c.doc,c.est,c.ofi,c.zona,c.ruta,vendDe(c),c.lat,c.lon,c.tel||'']).filter(c=>rhS.has(c[7]));
   const sinVend=PD.mae.list.filter(c=>!CORE.INACTIVO.test(c.est)).length-cl.length;
+  if(cl.length<50){ $('hPad').textContent=`Solo ${cl.length} clientes quedaron con vendedor; no se guardó para no dejar a los vendedores sin padrón. Revisa los archivos.`; $('bPad').disabled=false; return; }
   if(!cl.length){ $('hPad').textContent='No se pudo asignar ningún cliente a un vendedor: revisa que el maestro tenga COD.VENDEDOR o RUTA, y que el DIARIO tenga RUTA, SAP y DNI.'; $('bPad').disabled=false; return; }
   const saps=new Set(cl.map(c=>c[7]));
   const ven=[...saps].map(s=>{const x=PD.rh.D.get(s);return [s,x?x.nom:'',x?x.jefe:''];});
