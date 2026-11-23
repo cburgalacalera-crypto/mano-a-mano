@@ -609,6 +609,10 @@ async function pipe(u,stream){return new Uint8Array(await new Response(new Blob(
 async function cifrar(key,obj){const iv=rnd(12);const z=await pipe(TE.encode(JSON.stringify(obj)),new CompressionStream('gzip'));return {i:b64(iv),d:b64(new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,z)))};}
 async function descifrar(key,o){const z=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:ub64(o.i)},key,ub64(o.d)));return JSON.parse(TD.decode(await pipe(z,new DecompressionStream('gzip'))));}
 let VEN=new Map(),CLI=[],ADMPW='';
+function cargarAdmin(A){
+  VEN=new Map(A.ven.map(v=>[String(v[0]),{sap:String(v[0]),nom:v[1],jefe:v[2]}]));
+  CLI=A.cl.map(c=>({cod:String(c[0]),nom:c[1],doc:c[2],est:c[3],ofi:c[4],zona:c[5],ruta:c[6],vend:String(c[7]),lat:c[8],lon:c[9],tel:c[10]||'',dir:c[11]||''}));
+}
 const pintarPadron=()=>{$('hPadron').textContent=`Padrón cifrado ${ORIGEN}: ${(P.ncl||0).toLocaleString()} clientes · ${P.nv||0} vendedores con DNI · actualizado ${P.gen}`;};
 pintarPadron();
 const sha256=async t=>hex(new Uint8Array(await crypto.subtle.digest('SHA-256',TE.encode(t))));
@@ -769,8 +773,7 @@ $('aForm').onsubmit=async e=>{
   try{ const bits=await derive('LC|'+$('aPw').value,ub64(P.a.s),P.it); A=await descifrar(await aesKey(bits.slice(32)),P.a); }catch(err){ A=null; }
   if(!A){$('aErr').textContent='Contraseña incorrecta.';return;}
   $('aErr').textContent=''; ADMPW=$('aPw').value;
-  VEN=new Map(A.ven.map(v=>[String(v[0]),{sap:String(v[0]),nom:v[1],jefe:v[2]}]));
-  CLI=A.cl.map(c=>({cod:String(c[0]),nom:c[1],doc:c[2],est:c[3],ofi:c[4],zona:c[5],ruta:c[6],vend:String(c[7]),lat:c[8],lon:c[9],tel:c[10]||'',dir:c[11]||''}));
+  cargarAdmin(A);
   $('hSub').textContent='Administración';
   $('padInfo').textContent=`Padrón actual: ${CLI.length.toLocaleString()} clientes, ${P.nv||0} vendedores con DNI (actualizado ${P.gen}).`;
   ver('pAdm');
@@ -966,6 +969,7 @@ $('bPad').onclick=async()=>{
       const j=await r.json();
       if(!j.ok) throw new Error(j.error==='clave'?'la contraseña maestra no coincide con la del servidor':(j.error||'error'));
       P=NP; ORIGEN='en línea'; pintarPadron(); if(npw) ADMPW=npw;
+      cargarAdmin({ven,cl}); // el Excel usa al instante el padrón recién guardado
       $('hPad').textContent='Guardado en línea: '+resumen+'. Los vendedores ya ven el padrón nuevo.';
     }catch(err){ $('hPad').textContent='No se pudo guardar en línea ('+err.message+'). Intenta de nuevo.'; }
     $('bPad').disabled=false; return;
