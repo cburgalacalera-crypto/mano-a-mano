@@ -391,13 +391,13 @@ const ALIAS={
   doc:['NUM. DOCUMENTO','NUM DOCUMENTO','NRO DOCUMENTO','N DOCUMENTO','NUMERO DOCUMENTO','DOCUMENTO','RUC','DNI/RUC','RUC/DNI','DNI RUC','NUM DOC','NRO DOC'],
   x:['X','LONGITUD','LONG','LON','LNG'],
   y:['Y','LATITUD','LAT'],
-  ofi:['OFICINA','SEDE','SUCURSAL'],
-  zona:['ZONA','ZONA_2','ZONA 2','ZONA VENTA','ZONA DE VENTA'],
+  ofi:['OFICINA','SEDE','SUCURSAL','OFICINA_VENTAS','OFICINA VENTAS','OFICINA DE VENTAS','OFICINA*','SEDE*','SUCURSAL*'],
+  zona:['ZONA','ZONA_2','ZONA 2','ZONA VENTA','ZONA DE VENTA','ZONA*'],
   ruta:['RUTA','COD RUTA','CODIGO RUTA','RUTA VENTA'],
   est:['ESTADO','ESTADO CLIENTE','STATUS','SITUACION'],
   vend:['COD.VENDEDOR','COD VENDEDOR','CODIGO VENDEDOR','COD_VENDEDOR','SAP VENDEDOR','VENDEDOR SAP','SAP'],
-  dir:['DIRECCION','DIRECCION FISCAL','DOMICILIO'],
-  tel:['TELEFONO','TELEFONO 1','TELEFONO CONTACTO','NRO TELEFONO','CELULAR','TELF','CEL','MOVIL']
+  dir:['DIRECCION','DIRECCION FISCAL','DOMICILIO','DIRECCION*'],
+  tel:['TELEFONO','TELEFONO 1','TELEFONO CONTACTO','NRO TELEFONO','CELULAR','TELF','CEL','MOVIL','TELEFONO*','CELULAR*']
 };
 const ALIAS_RH={
   sap:['SAP','COD SAP','CODIGO SAP','COD TRAB','COD TRABAJADOR','CODIGO TRABAJADOR'],
@@ -414,7 +414,8 @@ function detectar(rows, alias, req){
     const ci={}, nombres={};
     for(const [k,al] of Object.entries(alias)){
       ci[k]=-1;
-      for(const a of al){ const j=h.indexOf(norm(a)); if(j>=0){ ci[k]=j; nombres[k]=String(rows[i][j]).trim(); break; } }
+      for(const a of al){ const pre=a.endsWith('*'), na=norm(pre?a.slice(0,-1):a);
+        const j=pre?h.findIndex(x=>x.startsWith(na)):h.indexOf(na); if(j>=0){ ci[k]=j; nombres[k]=String(rows[i][j]).trim(); break; } }
     }
     if(req.every(k=>ci[k]>=0)) return {i,ci,nombres};
   }
@@ -913,7 +914,7 @@ drop($('dPM'),$('fPM'),async files=>{
       const m=CORE.buildMaestro(sheetRows(wb,name)), k=m.cols;
       m.list.forEach(c=>porCod.set(c.cod,c)); ok++;
       const asig=k.vend?'vendedor por '+k.vend:k.ruta?'vendedor por '+k.ruta+' (desde el DIARIO)':'⚠ sin vendedor ni ruta';
-      partes.push(`${f.name} · hoja ${name} · ${m.list.length.toLocaleString()} clientes · ${asig}${k.tel?'':' · sin teléfono'}`);
+      partes.push(`${f.name} · hoja ${name} · ${m.list.length.toLocaleString()} clientes · ${asig}${k.ofi?' · sede por '+k.ofi:' · ⚠ sin columna de oficina (SEDE saldrá vacía)'}${k.tel?'':' · sin teléfono'}${k.dir?'':' · sin dirección'}`);
     }catch(e){ errores.push(f.name+': '+e.message); }
   }
   PD.mae=ok?{list:[...porCod.values()]}:null;
