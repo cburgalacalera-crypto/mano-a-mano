@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Correcciones y Bajas · La Calera (DEMO)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{--bg:#f3f5f2;--panel:#ffffff;--panel2:#e9eee9;--fg:#1b2420;--mut:#5d6a63;--line:#d3dcd5;--acc:#0f6b3f;--acc-fg:#ffffff;--ok:#1f8a4c;--warn:#b7791f;--crit:#c2402e;--gps:#2463c9;--wa:#1fa855;--firma:#1f3a5f;--tab-on:#1b2420;--tab-on-fg:#ffffff;
+--f-disp:"Barlow Condensed","Arial Narrow",sans-serif;--f-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;--f-num:"JetBrains Mono",ui-monospace,Consolas,monospace;--f-firma:"Libre Baskerville",Georgia,serif}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#141917;--panel:#1c2320;--panel2:#252e2a;--fg:#e8eee9;--mut:#9aa8a0;--line:#34403a;--acc:#3fae72;--acc-fg:#0d1511;--ok:#4cc27c;--warn:#e3a943;--crit:#ef6f5c;--gps:#6ea2ff;--wa:#2fbf68;--firma:#cdbf98;--tab-on:#ffffff;--tab-on-fg:#111614}}
+:root[data-theme=dark]{--bg:#141917;--panel:#1c2320;--panel2:#252e2a;--fg:#e8eee9;--mut:#9aa8a0;--line:#34403a;--acc:#3fae72;--acc-fg:#0d1511;--ok:#4cc27c;--warn:#e3a943;--crit:#ef6f5c;--gps:#6ea2ff;--wa:#2fbf68;--firma:#cdbf98;--tab-on:#ffffff;--tab-on-fg:#111614}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--f-body);background:var(--bg);color:var(--fg);font-size:15px}
+.top{max-width:1180px;margin:0 auto;padding:14px 16px 10px;display:flex;align-items:flex-end;gap:12px;border-bottom:2px solid var(--acc)}
+.top h1{font-family:var(--f-disp);font-size:26px;margin:0;font-weight:700;line-height:1}
+.top h1 .dot{color:var(--acc)}
+.top .sub{font-size:12px;color:var(--mut);margin-top:3px}
+.top .der{margin-left:auto;display:flex;align-items:center;gap:14px}
+.firma{font-family:var(--f-firma);font-size:12px;text-align:right;color:var(--fg);line-height:1.35}
+.firma b{color:var(--firma)}.firma .sc{font-variant:small-caps;letter-spacing:.5px;color:var(--firma)}
+.tema{font-family:var(--f-num);font-size:10px;letter-spacing:1px;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
+.demo{font-family:var(--f-num);font-size:10px;letter-spacing:1px;border:1px solid var(--warn);color:var(--warn);border-radius:999px;padding:3px 8px}
+main{max-width:720px;margin:0 auto;padding:18px 16px}
+main.ancho{max-width:1180px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:14px}
+.hidden{display:none!important}
+h2{font-family:var(--f-disp);font-size:20px;margin:0 0 6px}
+h3{font-family:var(--f-disp);font-size:17px;margin:14px 0 8px}
+label{display:block;font-weight:600;margin:12px 0 4px;font-size:14px}
+label .req{color:var(--crit)}
+input,select,textarea{width:100%;padding:10px;border:1.5px solid var(--line);border-radius:8px;font:inherit;background:var(--panel);color:var(--fg)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--acc)}
+textarea{min-height:64px}
+input.bad,select.bad,textarea.bad{border-color:var(--crit);box-shadow:0 0 0 2px color-mix(in srgb,var(--crit) 20%,transparent)}
+button{font:inherit;font-family:var(--f-disp);font-size:15px;font-weight:600;letter-spacing:.2px;border:0;border-radius:7px;padding:10px 16px;cursor:pointer;background:var(--acc);color:var(--acc-fg)}
+button.sec{background:var(--panel);color:var(--acc);border:1.5px solid var(--acc)}
+button.gris{background:var(--panel);color:var(--mut);border:1px solid var(--line);font-family:var(--f-body);font-size:13px;font-weight:500;padding:7px 12px}
+button.wa{background:var(--wa);color:#fff}
+button:disabled{opacity:.45;cursor:default}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.home{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.homecard{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--acc);border-radius:8px;padding:16px;cursor:pointer;text-align:left}
+.homecard.adm{border-top-color:var(--firma)}
+.homecard b{font-family:var(--f-disp);font-size:20px;display:block;margin-bottom:4px}
+.homecard span{font-size:12px;color:var(--mut)}
+.homecard:hover{background:var(--panel2)}
+.pie{text-align:center;font-family:var(--f-firma);font-size:12px;color:var(--mut);margin-top:10px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;background:var(--panel);color:var(--fg);border:1px solid var(--line)}
+.tabs button.on{background:var(--tab-on);color:var(--tab-on-fg);border-color:var(--tab-on)}
+.muted{color:var(--mut);font-size:13px}
+.pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--panel2)}
+.pill.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,transparent)}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.pill.err{color:var(--crit);background:color-mix(in srgb,var(--crit) 12%,transparent)}
+.sug{border:1px solid var(--line);border-radius:8px;margin-top:4px;background:var(--panel);max-height:280px;overflow:auto}
+.sug div{padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+.sug div:hover{background:var(--panel2)}
+.sug b,.sel b{font-family:var(--f-num);font-size:13px}
+.sel{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:8px;padding:8px 10px;margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#map{height:260px;border-radius:8px;margin-top:8px;border:1px solid var(--line)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+pre.msg{white-space:pre-wrap;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--wa);border-radius:8px;padding:12px;font-family:var(--f-num);font-size:13px;margin:8px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi b{display:block;font-size:24px;font-family:var(--f-num);font-weight:600}
+.kpi span{font-size:12px;color:var(--mut)}
+.kpi.w b{color:var(--warn)}.kpi.c b{color:var(--crit)}.kpi.g b{color:var(--acc)}
+.tblwrap{overflow:auto;max-height:480px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:13px;background:var(--panel)}
+th{position:sticky;top:0;background:var(--panel2);color:var(--fg);text-align:left;padding:7px 8px;white-space:nowrap;font-family:var(--f-disp);font-size:13px;border-bottom:2px solid var(--acc)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num{font-family:var(--f-num);font-size:12px}
+td.al{color:var(--crit);font-weight:600;font-size:12px}
+td small{color:var(--mut)}
+.drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;background:var(--panel2)}
+.drop p{margin:0 0 8px}
+.note{background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:8px;padding:10px;font-size:13px}
+footer{text-align:center;color:var(--mut);font-family:var(--f-firma);font-size:12px;padding:20px}
+@media(max-width:640px){.home,.grid2{grid-template-columns:1fr}.firma{display:none}.top h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><h1>Correcciones <span class="dot">·</span> Bajas</h1><div class="sub">La Calera · Canal Tradicional</div></div>
+  <div class="der"><span class="demo">DEMO</span><button class="tema" id="btnTema" onclick="cambiarTema()">☀ CLARO</button>
+  <div class="firma">Desarrollado por: <b>Carlos Burga Vasquez</b><br><span class="sc">Analista GPS · La Calera</span></div></div>
+</div>
+<main id="main">
+
+<!-- INICIO -->
+<section id="vHome">
+  <div class="card">
+    
+    <div class="home">
+      <div class="homecard" onclick="ir('vDni')"><b>Vendedor</b><span>Corregir ubicación o datos de un cliente, o pedir su baja, y enviarlo por WhatsApp</span></div>
+      <div class="homecard adm" onclick="ir('vAdminLogin')"><b>Administración</b><span>Generar los Excel de correcciones y de bajas desde el chat · con contraseña</span></div>
+    </div>
+    <p class="note" style="margin-top:14px">Demo con datos ficticios. DNI de prueba: <b>12345678</b> (SAP 215) o <b>87654321</b> (SAP 2595). Contraseña de administración: <b>demo2026</b>.</p>
+  </div>
+</section>
+
+<!-- DNI -->
+<section id="vDni" class="hidden">
+  <div class="card">
+    <h2>Ingreso del vendedor</h2>
+    <label>DNI <span class="req">*</span></label>
+    <input id="dni" inputmode="numeric" maxlength="8" placeholder="8 dígitos" onkeydown="if(event.key==='Enter')entrarVendedor()">
+    <p id="dniErr" class="pill err hidden"></p>
+    <p class="note" style="margin-top:12px"><b>Demo:</b> cualquier DNI de 8 dígitos entra con una cartera de prueba. También puedes usar
+      <a href="#" onclick="$('dni').value='12345678';entrarVendedor();return false">12345678</a> (SAP 215, Lima Norte) o
+      <a href="#" onclick="$('dni').value='87654321';entrarVendedor();return false">87654321</a> (SAP 2595, Mercados).</p>
+    <div class="btnrow"><button onclick="entrarVendedor()">Entrar</button><button class="gris" onclick="ir('vHome')">Volver</button></div>
+  </div>
+</section>
+
+<!-- VENDEDOR -->
+<section id="vVend" class="hidden">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+    <div><b>Vendedor (SAP): <span id="vSap"></span></b><br><span class="muted"><span id="vN"></span> clientes en tu cartera</span></div>
+    <button class="gris" onclick="salir()">Salir</button>
+  </div>
+  <div class="tabs"><button id="tCor" class="on" onclick="tab('cor')">Corrección</button><button id="tBaja" onclick="tab('baja')">Baja</button></div>
+
+  <!-- CORRECCIÓN -->
+  <div id="fCor" class="card">
+    <h2>Corrección de cliente</h2>
+    <label>Tipo de solicitud <span class="req">*</span></label>
+    <select id="cTipo" onchange="cambioTipo()">
+      <option value="">— Elegir —</option>
+      <option>ACTUALIZACIÓN DE COORDENADAS</option>
+      <option>ASIGNACIÓN A MI CARTERA</option>
+      <option>CORRECCIÓN DE DATOS</option>
+    </select>
+    <p class="muted" id="cTipoAyuda"></p>
+
+    <div id="cClienteMio">
+      <label>Cliente <span class="req">*</span></label>
+      <input id="cBusca" placeholder="Escribe parte del nombre o del código" oninput="sugerir('c')">
+      <div id="cSug" class="sug hidden"></div>
+      <div id="cSel"></div>
+    </div>
+    <div id="cClienteOtro" class="hidden">
+      <label>Código del cliente, DNI o RUC <span class="req">*</span></label>
+      <input id="cIdOtro" inputmode="numeric" placeholder="Código (7), DNI (8) o RUC (11)">
+      <label>Nombre del cliente <span class="req">*</span></label>
+      <input id="cNomOtro" placeholder="Como aparece en su documento">
+    </div>
+
+    <div id="cBloqueUbic">
+      <label>Nueva ubicación <span class="req" id="cUbReq">*</span></label>
+      <div class="btnrow" style="margin-top:0"><button class="sec" type="button" onclick="usarGPS()">📍 Usar mi ubicación actual</button></div>
+      <p class="muted">Párate en la puerta del cliente. También puedes pegar un enlace de Google Maps o coordenadas, o tocar el mapa.</p>
+      <input id="cUbic" placeholder="Ej: -11.97810, -77.04704  o  https://maps.google.com/?q=..." oninput="leerUbic()">
+      <p id="cUbInfo" class="muted"></p>
+      <div id="map"></div>
+      <p class="muted">⚪ Punto actual en el maestro · 🔵 Punto nuevo</p>
+    </div>
+
+    <div class="grid2">
+      <div><label>Dirección nueva</label><input id="cDir" placeholder="Solo si cambió"></div>
+      <div><label>Referencia</label><input id="cRef" placeholder="Ej: frente al mercado"></div>
+    </div>
+    <label>Teléfono nuevo</label><input id="cTel" inputmode="numeric" maxlength="9" placeholder="9 dígitos (opcional)">
+    <label>Observación</label><textarea id="cObs"></textarea>
+    <div class="btnrow"><button onclick="generar('cor')">Generar mensaje</button><button class="gris" onclick="limpiar('cor')">Limpiar</button></div>
+  </div>
+
+  <!-- BAJA -->
+  <div id="fBaja" class="card hidden">
+    <h2>Baja de cliente</h2>
+    <label>Cliente <span class="req">*</span></label>
+    <input id="bBusca" placeholder="Escribe parte del nombre o del código" oninput="sugerir('b')">
+    <div id="bSug" class="sug hidden"></div>
+    <div id="bSel"></div>
+    <label>Motivo <span class="req">*</span></label>
+    <select id="bMot" onchange="document.getElementById('bDobleWrap').classList.toggle('hidden',this.value!=='DOBLE CÓDIGO')">
+      <option value="">— Elegir —</option>
+      <option>CIERRE DEFINITIVO</option><option>CAMBIO DE GIRO</option><option>DOBLE CÓDIGO</option>
+      <option>CAMBIO RAZÓN SOCIAL</option><option>CAMBIO DE DISTRITO</option><option>MOROSO</option><option>OTRO</option>
+    </select>
+    <div id="bDobleWrap" class="hidden"><label>Código que se queda <span class="req">*</span></label><input id="bDoble" inputmode="numeric" placeholder="Código del cliente que sigue activo"></div>
+    <label>Observación <span class="req" id="bObsReq" title="Obligatoria si el motivo es OTRO">*</span></label><textarea id="bObs" placeholder="Obligatoria si el motivo es OTRO"></textarea>
+    <div class="btnrow"><button onclick="generar('baja')">Generar mensaje</button><button class="gris" onclick="limpiar('baja')">Limpiar</button></div>
+  </div>
+
+  <!-- MENSAJE -->
+  <div id="msgCard" class="card hidden">
+    <h2>Mensaje listo</h2>
+    <pre class="msg" id="msgTxt"></pre>
+    <p class="muted" id="msgGrupo"></p>
+    <div class="btnrow"><a id="msgWa" target="_blank" rel="noopener"><button class="wa">Enviar por WhatsApp</button></a><button class="sec" onclick="copiar()">Copiar</button></div>
+    <p id="copiado" class="pill ok hidden">Copiado</p>
+  </div>
+</section>
+
+<!-- ADMIN LOGIN -->
+<section id="vAdminLogin" class="hidden">
+  <div class="card">
+    <h2>Administración</h2>
+    <label>Contraseña maestra</label><input id="pwd" type="password" onkeydown="if(event.key==='Enter')entrarAdmin()">
+    <p class="note" style="margin-top:12px"><b>Demo:</b> contraseña <b>demo2026</b>.</p>
+    <p id="pwdErr" class="pill err hidden">Contraseña incorrecta</p>
+    <div class="btnrow"><button onclick="entrarAdmin()">Entrar</button><button class="gris" onclick="ir('vHome')">Volver</button></div>
+  </div>
+</section>
+
+<!-- ADMIN -->
+<section id="vAdmin" class="hidden">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2>Generar Excel</h2><button class="gris" onclick="salir()">Salir</button></div>
+    <div class="drop">
+      <p><b>1. Chat exportado de WhatsApp</b> (.zip o .txt, uno o varios grupos)</p>
+      <input type="file" id="fChat" accept=".zip,.txt" multiple>
+      <p class="muted" id="chatInfo">Sin archivos. <a href="#" onclick="cargarEjemplo();return false">Usar chat de ejemplo</a></p>
+    </div>
+    <div class="drop" style="margin-top:10px">
+      <p><b>2. Maestro de clientes</b> (opcional en la demo; si no, se usa el padrón ficticio)</p>
+      <input type="file" id="fMae" accept=".xlsx,.xls,.csv">
+      <p class="muted" id="maeInfo">Usando padrón DEMO (24 clientes).</p>
+    </div>
+    <div class="grid2">
+      <div><label>Desde</label><input type="date" id="fDesde"></div>
+      <div><label>Hasta</label><input type="date" id="fHasta"></div>
+    </div>
+    <div class="btnrow"><button id="btnProc" onclick="procesar()" disabled>Procesar</button></div>
+  </div>
+
+  <div id="res" class="hidden">
+    <div class="kpis" id="kpis"></div>
+    <div class="tabs"><button id="rtCor" class="on" onclick="rtab('cor')">Correcciones</button><button id="rtBaja" onclick="rtab('baja')">Bajas</button><button id="rtNo" onclick="rtab('no')">No leídos</button></div>
+    <div class="card">
+      <div class="btnrow" style="margin-top:0;margin-bottom:10px"><button onclick="excel('cor')">Descargar Excel CORRECCIONES</button><button onclick="excel('baja')">Descargar Excel BAJAS</button></div>
+      <div class="tblwrap"><table id="tbl"></table></div>
+    </div>
+  </div>
+</section>
+</main>
+<footer>Desarrollado por: Carlos Burga Vasquez · Analista GPS – Canal Tradicional · La Calera</footer>
+
+<!-- ===================== NÚCLEO (sin DOM; se prueba también en Node) ===================== -->
+<script id="core">
+const CORE = (() => {
+  const sinTilde = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = s => sinTilde(s).toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // ---------- Coordenadas ----------
+  function enPeru(lat, lon) { return lat <= 0.1 && lat >= -18.6 && lon <= -68.6 && lon >= -81.4; }
+  function corregirPar(a, b) {
+    // Acepta lat/long invertidas y sin signo (frecuente en Arequipa: "16.42101 71.53894")
+    let la = -Math.abs(a), lo = -Math.abs(b);
+    if (enPeru(la, lo)) return [la, lo];
+    if (enPeru(lo, la)) return [lo, la];
+    return null;
+  }
+  function leerCoords(txt) {
+    let t = (txt || '').replace(/(-\d{1,2}),(\d{4,})/g, '$1.$2');
+    if (/coord|cordena|ubicaci/i.test(t)) t = t.replace(/\b(1[0-8])(\d{4,6})\s*[,;]?\s*(7\d|8[01])(\d{4,6})\b/g, '-$1.$2, -$3.$4');
+    const out = { lat: null, lon: null, link: '', corto: '', origen: '' };
+    const largo = t.match(/https?:\/\/(?:www\.)?(?:maps\.google\.com|google\.com\/maps|maps\.google\.[a-z.]+)[^\s]*/i);
+    const corto = t.match(/https?:\/\/(?:maps\.app\.goo\.gl|goo\.gl\/maps)\/[A-Za-z0-9_\-]+/i);
+    if (largo) out.link = largo[0];
+    if (corto) { out.corto = corto[0]; if (!out.link) out.link = corto[0]; }
+    const re = /(-?\d{1,2}\.\d{3,})\s*[,;]?\s*(-?\d{2}\.\d{3,})/g;
+    let m;
+    while ((m = re.exec(t))) {
+      const p = corregirPar(parseFloat(m[1]), parseFloat(m[2]));
+      if (p) { out.lat = +p[0].toFixed(6); out.lon = +p[1].toFixed(6); out.origen = 'COORDENADA'; break; }
+    }
+    return out;
+  }
+  function distM(a, b, c, d) {
+    if ([a, b, c, d].some(v => v == null || isNaN(v))) return null;
+    const R = 6371000, r = x => x * Math.PI / 180;
+    const dl = r(c - a), dn = r(d - b);
+    const h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dn / 2) ** 2;
+    return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+  }
+
+  // ---------- Lectura del chat ----------
+  const RE_LINEA = /^‎?\[?(\d{1,2})\/(\d{1,2})\/(\d{2,4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([ap]\.?\s?m\.?)?\]?\s*(?:-\s*)?(.*)$/i;
+  function parseChat(texto, archivo) {
+    const lineas = texto.replace(/\r/g, '').split('\n');
+    const msgs = [];
+    let cur = null;
+    const ampm = /\d{1,2}:\d{2}(:\d{2})?\s*[ap]\.?\s?m/i.test(texto.slice(0, 5000));
+    for (const L of lineas) {
+      const m = L.match(RE_LINEA);
+      if (m) {
+        let a = +m[1], b = +m[2], y = +m[3];
+        if (y < 100) y += 2000;
+        let mes, dia;
+        if (ampm && a <= 12 && b <= 31 && !(a > 12)) { mes = a; dia = b; } else { dia = a; mes = b; }
+        if (mes > 12) { const x = mes; mes = dia; dia = x; }
+        let h = +m[4];
+        const ap = (m[7] || '').toLowerCase();
+        if (ap.startsWith('p') && h < 12) h += 12;
+        if (ap.startsWith('a') && h === 12) h = 0;
+        const fecha = new Date(y, mes - 1, dia, h, +m[5], +(m[6] || 0));
+        let resto = m[8];
+        let autor = '', txt = resto;
+        const k = resto.indexOf(': ');
+        if (k > 0 && k < 60) { autor = resto.slice(0, k).trim(); txt = resto.slice(k + 2); }
+        else { autor = ''; } // mensaje del sistema
+        cur = { fecha, autor, texto: txt, archivo };
+        msgs.push(cur);
+      } else if (cur) {
+        cur.texto += '\n' + L;
+      }
+    }
+    for (const x of msgs) {
+      x.texto = x.texto
+        .replace(/[A-Za-z0-9+\/=]{120,}/g, ' ')         // imágenes incrustadas en base64
+        .replace(/^\s*\[Reenviado\]\s*/i, '')
+        .replace(/\u200e/g, '')
+        .replace(/^[\s:]+/, '');
+    }
+    return msgs;
+  }
+
+  const ES_STAFF = a => /^\s*🔰/.test(a || '');
+  const IGNORAR = /^(<imagen omitida>|<video omitido>|<sticker omitido>|se elimin[oó] este mensaje\.?|este mensaje fue eliminado\.?|<multimedia omitido>)$/i;
+  const CLAVE_INICIO = /(solicitud|coorden|cordena|ubicaci|asignaci|asignar|cartera|punteo|\bbaja\b|actualiza|georef)/i;
+
+  function tipoDe(t) {
+    const s = sinTilde(t).toLowerCase();
+    if (/\*?baja de cliente\*?/.test(s) || (/\b(dar de baja|baja)\b/.test(s) && !/\balta\b/.test(s))) return 'BAJA';
+    if (/asigna|pasar a mi cartera|anadir a mi cartera|agregar a mi cartera|a mi cartera|a mi codigo/.test(s)) return 'ASIGNACIÓN A MI CARTERA';
+    if (/coorden|cordena|ubicacion|punteo|georef|ubicacio/.test(s)) return 'ACTUALIZACIÓN DE COORDENADAS';
+    if (/correcci[o]n de datos|direccion nueva|telefono nuevo/.test(s)) return 'CORRECCIÓN DE DATOS';
+    if (/solicitud de alta|alta nueva|\balta\b|cliente nuevo|crear cliente|cree un cliente/.test(s)) return 'ALTA';
+    return '';
+  }
+
+  // Formato nuevo del formulario: "CLAVE: valor"
+  function kv(t) {
+    const o = {};
+    for (const L of t.split('\n')) {
+      const m = L.match(/^\s*\*?([A-ZÁÉÍÓÚÑ0-9 ()\/.]+?)\*?\s*:\s*(.*)$/i);
+      if (m) o[norm(m[1])] = m[2].trim();
+    }
+    return o;
+  }
+
+  function extraerLibre(t, autor) {
+    const r = { codCli: '', doc: '', docTipo: '', nombre: '', vend: '', dir: '', tel: '', otros: [] };
+    const lineas = t.split('\n').map(x => x.trim()).filter(Boolean);
+    const limpia = t.replace(/https?:\/\/\S+/g, ' ').replace(/-?\d{1,2}\.\d{3,}\s*[,;]?\s*-?\d{2}\.\d{3,}/g, ' ');
+    // Vendedor: en una línea que diga vendedor / cod vendedor
+    const LL = limpia.split('\n');
+    LL.forEach((L, i) => {
+      const s = sinTilde(L).toLowerCase();
+      if (/(vende|venderdor|\bvend\b|\bven\b|cod\.? ?vend|codigo vendedor)/.test(s)) {
+        const n = L.match(/\b(\d{2,6})\b/);
+        if (n && !r.vend) r.vend = n[1];
+        if (!n && !r.vend) for (const sig of LL.slice(i + 1, i + 3)) { const m2 = sig.trim().match(/^(?:c[oó]d(?:igo)?\.?\s*[:.]?\s*)?(\d{2,6})\b/i); if (m2) { r.vend = m2[1]; break; } }
+      }
+      const cc = L.match(/c[oó]d(?:igo)?\.?\s*(?:de\s*)?cliente\s*[:.\-]?\s*(\d{5,8})/i);
+      if (cc && !r.codCli) r.codCli = cc[1];
+      if (!r.vend) { const c2 = s.match(/^c[o]?digo\s*[:.]?\s*(\d{2,6})\b/); if (c2) r.vend = c2[1]; }
+    });
+    if (!r.vend) { const p = (autor || '').match(/\(?\b(\d{2,6})\)?\s*$/); if (p) r.vend = p[1]; }
+    // Documentos y teléfonos
+    const nums = (limpia.match(/\d[\d ]{6,13}\d/g) || []).map(x => x.replace(/ /g, ''));
+    const unicos = [...new Set((limpia.match(/\b\d{7,11}\b/g) || []))];
+    for (const n of unicos) {
+      if (n.length === 11 && /^(10|15|16|17|20)/.test(n)) { if (!r.doc) { r.doc = n; r.docTipo = 'RUC'; } }
+      else if (n.length === 9 && n[0] === '9') { if (!r.tel) r.tel = n; }
+      else if (n.length === 8) { if (!r.doc) { r.doc = n; r.docTipo = 'DNI'; } else r.otros.push(n); }
+      else if (n.length === 7) { r.otros.push(n); }
+    }
+    if (!r.tel) { const t9 = nums.find(n => n.length === 9 && n[0] === '9'); if (t9) r.tel = t9; }
+    if (!r.codCli && !r.doc && r.otros.length) r.codCli = r.otros[0]; // 7 dígitos: código o DNI sin 0
+    // Nombre y dirección por etiqueta
+    for (const L of lineas) {
+      let m = L.match(/^\*?\s*(cliente|nombre|raz[oó]n social)\s*[:.\-]?\s*(.*)$/i);
+      if (m && !r.nombre) {
+        const v = m[2].replace(/(dni|ruc|doc)\b.*$/i, '').replace(/\d{5,}/g, '').replace(/[:.*]/g, ' ').trim();
+        if (v.length >= 3) r.nombre = v;
+      }
+      m = L.match(/^\*?\s*(direcci[oó]n|direcion|dir|dr|domicilio)\s*[:.\-]\s*(.+)$/i) || L.match(/^\*?\s*(direcci[oó]n)\s+(.+)$/i);
+      if (m && !r.dir) r.dir = m[2].trim();
+    }
+    if (!r.nombre) {
+      // línea con letras, sin palabras clave, al lado del documento (ej. "30585368 margarita alvarez")
+      for (const L of lineas) {
+        const s = sinTilde(L).toLowerCase();
+        if (/vend|solicitud|coorden|cordena|ubicac|buen|porfa|favor|gracias|https?:|cartera|asign|actualiz|apoyo|@|codigo|dni|ruc|cel|telef|baja|motivo|correo|mcdo|mercado|puesto|av\.|calle|jr\.|mz/.test(s)) continue;
+        const v = L.replace(/\d+/g, ' ').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ ]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (v.split(' ').length >= 2 && v.length >= 6) { r.nombre = v; break; }
+      }
+    }
+    return r;
+  }
+
+  // Une mensajes partidos (mismo autor, ≤10 min) y separa solicitudes
+  function solicitudes(msgs) {
+    const out = [], noLeidos = [];
+    const abiertas = {}, huerf = {}; // por autor
+    let pendientesStaff = [];
+    for (const m of msgs) {
+      const t = (m.texto || '').trim();
+      if (!m.autor || !t || IGNORAR.test(t)) continue;
+      if (ES_STAFF(m.autor)) {
+        const s = sinTilde(t).toLowerCase();
+        if (/solicitudes procesadas/.test(s)) {
+          out.forEach(x => { if (!x.atendido && x.fecha <= m.fecha) { x.atendido = 'SÍ'; x.atendidoPor = m.autor.replace(/🔰\s*/, ''); } });
+        } else if (/procesad|asignad|actualizad|atendid|listo|realizad/.test(s)) {
+          const ult = [...out].reverse().find(x => !x.atendido && (m.fecha - x.fecha) < 6 * 3600e3);
+          if (ult) { ult.atendido = 'SÍ'; ult.atendidoPor = m.autor.replace(/🔰\s*/, ''); }
+        }
+        continue;
+      }
+      const esNuevo = /^\*?(CORRECCI[OÓ]N DE CLIENTE|BAJA DE CLIENTE)\*?/i.test(t);
+      const ab = abiertas[m.autor];
+      const soloUbic0 = /^(ubicaci[oó]n:|https?:\/\/\S*maps|-?\d{1,2}\.\d{3,})/i.test(t) && t.length < 260;
+      // Ubicación enviada ANTES del texto (frecuente en Mercados): se guarda y se une a la siguiente solicitud del mismo autor
+      if (soloUbic0 && !(ab && (m.fecha - ab.fechaUlt) <= 10 * 60e3 && !ab.nuevo && !ab.tieneUbic)) {
+        huerf[m.autor] = { t, fecha: m.fecha }; continue;
+      }
+      if (ab && ab.tieneId && ab.tieneUbic && !/\d/.test(t) && !CLAVE_INICIO.test(sinTilde(t))) continue; // charla
+      const reciente = ab && (m.fecha - ab.fechaUlt) <= 10 * 60e3;
+      const tieneClave = CLAVE_INICIO.test(sinTilde(t));
+      const abCompleta = ab && ab.tieneId && ab.tieneUbic;
+      const soloUbic = /^(ubicaci[oó]n:|https?:\/\/|-?\d{1,2}\.\d{3,})/i.test(t) && t.length < 260;
+      if (!esNuevo && reciente && !ab.nuevo && (!tieneClave || soloUbic || /^@/.test(t)) && !(abCompleta && /\d{7,11}/.test(t) && !soloUbic)) {
+        ab.texto += '\n' + t; ab.fechaUlt = m.fecha; actualizarFlags(ab); continue;
+      }
+      let tt = t;
+      const hu = huerf[m.autor];
+      if (hu && (m.fecha - hu.fecha) <= 10 * 60e3 && !esNuevo) { tt = t + '\n' + hu.t; delete huerf[m.autor]; }
+      const s = { fecha: m.fecha, fechaUlt: m.fecha, autor: m.autor, texto: tt, archivo: m.archivo, nuevo: esNuevo };
+      actualizarFlags(s);
+      abiertas[m.autor] = s;
+      out.push(s);
+    }
+    // Clasificar y extraer
+    const res = [];
+    for (const s of out) {
+      const tipo = tipoDe(s.texto);
+      if (!tipo || tipo === 'ALTA') {
+        const r = extraerLibre(s.texto, s.autor);
+        if (tipo === 'ALTA' || r.doc || r.codCli) noLeidos.push({ ...s, motivo: tipo === 'ALTA' ? 'ALTA DE CLIENTE (no aplica)' : 'NO SE IDENTIFICA EL TIPO DE SOLICITUD' });
+        continue;
+      }
+      for (const r of dividir(s, tipo)) {
+        if (r.codCli || r.doc || r.nombreChat) res.push(r);
+        else if (/solicitud/i.test(s.texto)) noLeidos.push({ ...s, motivo: 'SIN CLIENTE IDENTIFICADO' });
+      }
+    }
+    return { sol: res, noLeidos };
+  }
+  function actualizarFlags(s) {
+    s.tieneId = /\b\d{7,11}\b/.test(s.texto.replace(/-?\d{1,2}\.\d{3,}/g, ''));
+    const c = leerCoords(s.texto);
+    s.tieneUbic = !!(c.lat || c.corto);
+  }
+
+  // Un mensaje libre con varios DNI/RUC en líneas distintas = varias solicitudes
+  function dividir(s, tipo) {
+    if (s.nuevo) return [armar(s, tipo)];
+    const lineas = s.texto.split('\n');
+    const conDoc = lineas.filter(L => /\b(\d{8}|(10|15|17|20)\d{9})\b/.test(L) && !/vend|cod/i.test(L));
+    const docs = new Set(conDoc.map(L => L.match(/\b(\d{8}|\d{11})\b/)[1]));
+    if (docs.size < 2) return [armar(s, tipo)];
+    const base = lineas.filter(L => !conDoc.includes(L)).join('\n');
+    return conDoc.map(L => { const r = armar({ ...s, texto: base + '\n' + L }, tipo); r.texto = s.texto; r.nombreChat = L.replace(/dni|ruc|cliente|[:.]/gi, ' ').replace(/\d+/g, ' ').replace(/\s+/g, ' ').trim(); r.multiple = true; return r; });
+  }
+  function armar(s, tipo) {
+    const c = leerCoords(s.texto);
+    const r = { fecha: s.fecha, autor: s.autor, archivo: s.archivo, texto: s.texto, atendido: s.atendido || '', atendidoPor: s.atendidoPor || '',
+      formato: s.nuevo ? 'FORMULARIO' : 'LIBRE', tipo, codCli: '', doc: '', docTipo: '', nombreChat: '', vend: '',
+      lat: c.lat, lon: c.lon, link: c.link, corto: c.corto, dir: '', ref: '', tel: '', obs: '', motivo: '', codQueda: '', precision: '' };
+    if (s.nuevo) {
+      const o = kv(s.texto);
+      r.tipo = o['SOLICITUD'] || (/BAJA/i.test(s.texto.slice(0, 30)) ? 'BAJA' : tipo);
+      if (/BAJA DE CLIENTE/i.test(s.texto.slice(0, 30))) r.tipo = 'BAJA';
+      r.codCli = (o['COD CLIENTE'] || '').replace(/\D/g, '');
+      const d = (o['DOC CLIENTE'] || o['DNI RUC CLIENTE'] || '').replace(/\D/g, '');
+      if (d) { r.doc = d; r.docTipo = d.length === 11 ? 'RUC' : 'DNI'; }
+      r.nombreChat = o['NOMBRE CLIENTE'] || '';
+      r.vend = (o['VENDEDOR SAP'] || '').replace(/\D/g, '');
+      r.dir = o['DIRECCION NUEVA'] || ''; r.ref = o['REFERENCIA'] || ''; r.tel = (o['TELEFONO NUEVO'] || '').replace(/\D/g, '');
+      r.obs = o['OBS'] || ''; r.motivo = o['MOTIVO'] || ''; r.codQueda = (o['COD QUE SE QUEDA'] || '').replace(/\D/g, '');
+      r.precision = o['PRECISION GPS'] || '';
+    } else {
+      const x = extraerLibre(s.texto, s.autor);
+      Object.assign(r, { codCli: x.codCli, doc: x.doc, docTipo: x.docTipo, nombreChat: x.nombre, vend: x.vend, dir: x.dir, tel: x.tel });
+      if (tipo === 'BAJA') {
+        const m = s.texto.match(/motivo\s*[:.\-]?\s*(.+)/i); if (m) r.motivo = m[1].trim().toUpperCase();
+      }
+    }
+    return r;
+  }
+
+  // ---------- Cruce con maestro ----------
+  function indexar(clientes) {
+    const porCod = new Map(), porDoc = new Map(), lista = [];
+    for (const c of clientes) {
+      if (c.cod) porCod.set(String(c.cod).replace(/^0+/, ''), c);
+      if (c.doc) porDoc.set(String(c.doc).replace(/\D/g, '').replace(/^0+/, ''), c);
+      lista.push({ c, toks: new Set(norm(c.nombre).split(' ').filter(w => w.length > 2)) });
+    }
+    return { porCod, porDoc, lista };
+  }
+  function buscar(idx, r) {
+    const k = v => String(v || '').replace(/^0+/, '');
+    if (r.codCli && idx.porCod.has(k(r.codCli))) return { c: idx.porCod.get(k(r.codCli)), por: 'CÓDIGO' };
+    if (r.doc && idx.porDoc.has(k(r.doc))) return { c: idx.porDoc.get(k(r.doc)), por: 'DOCUMENTO' };
+    if (r.codCli && idx.porDoc.has(k(r.codCli))) return { c: idx.porDoc.get(k(r.codCli)), por: 'DOCUMENTO' };
+    if (r.doc && idx.porCod.has(k(r.doc))) return { c: idx.porCod.get(k(r.doc)), por: 'CÓDIGO' };
+    if (r.nombreChat) {
+      const t = norm(r.nombreChat).split(' ').filter(w => w.length > 2);
+      if (t.length >= 2) {
+        let best = null, bs = 0;
+        for (const it of idx.lista) {
+          let n = 0; for (const w of t) if (it.toks.has(w)) n++;
+          const sc = n / Math.max(t.length, 2);
+          if (sc > bs) { bs = sc; best = it.c; }
+        }
+        if (best && bs >= 0.66) return { c: best, por: 'NOMBRE: VALIDAR' };
+      }
+    }
+    return { c: null, por: '' };
+  }
+
+  function validar(sols, clientes, vendedores) {
+    const idx = indexar(clientes);
+    const vset = new Set((vendedores || []).map(String));
+    const visto = new Map();
+    for (const r of sols) {
+      const al = [];
+      const f = buscar(idx, r);
+      r.m = f.c; r.cruce = f.por;
+      if (!f.c) al.push('CLIENTE NO ENCONTRADO');
+      if (f.por === 'NOMBRE: VALIDAR') al.push('CRUCE POR NOMBRE: VALIDAR');
+      if (!r.vend) al.push('SIN CÓDIGO DE VENDEDOR');
+      else if (vset.size && !vset.has(String(+r.vend))) al.push('VENDEDOR NO ESTÁ EN PADRÓN');
+      if (r.tipo !== 'BAJA') {
+        if (r.lat == null) al.push(r.corto ? 'ENLACE CORTO: ABRIR Y COPIAR COORDENADA' : (r.tipo === 'CORRECCIÓN DE DATOS' ? '' : 'SIN COORDENADAS'));
+        if (f.c && r.lat != null) {
+          r.dist = distM(f.c.lat, f.c.lon, r.lat, r.lon);
+          if (r.dist != null && r.dist > 5000) al.push('PUNTO NUEVO A MÁS DE 5 KM DEL ACTUAL');
+        }
+        if (f.c && r.vend) {
+          const dueño = String(+f.c.vend || '');
+          if (r.tipo === 'ASIGNACIÓN A MI CARTERA' && dueño && dueño === String(+r.vend)) al.push('YA ES DE SU CARTERA');
+          if (r.tipo !== 'ASIGNACIÓN A MI CARTERA' && dueño && dueño !== String(+r.vend)) al.push('CLIENTE DE OTRO VENDEDOR (' + dueño + ')');
+        }
+      } else {
+        if (!r.motivo) al.push('SIN MOTIVO');
+        if (/DOBLE/.test(norm(r.motivo)) && !r.codQueda) al.push('FALTA CÓDIGO QUE SE QUEDA');
+        if (f.c && r.vend && f.c.vend && String(+f.c.vend) !== String(+r.vend)) al.push('CLIENTE DE OTRO VENDEDOR (' + (+f.c.vend) + ')');
+      }
+      const clave = r.tipo + '|' + (f.c ? f.c.cod : (r.codCli || r.doc || norm(r.nombreChat)));
+      if (visto.has(clave)) { const prev = visto.get(clave); prev.reenvio = 'REEMPLAZADO POR #' + (sols.indexOf(r) + 1); al.push('REENVÍO de #' + (sols.indexOf(prev) + 1)); }
+      visto.set(clave, r);
+      r.alertas = al.filter(Boolean);
+    }
+    return sols;
+  }
+
+  return { parseChat, solicitudes, validar, leerCoords, distM, norm, sinTilde, extraerLibre, tipoDe };
+})();
+if (typeof module !== 'undefined') module.exports = CORE;
+</script>
+
+<!-- ===================== PÁGINA ===================== -->
+<script>
+// ---------- Padrón DEMO (en producción: padrón cifrado por DNI, igual que Mano a Mano) ----------
+const DEMO = {
+  vendedores: [
+    { dni: '12345678', sap: '215', nombre: 'VENDEDOR DEMO NORTE' },
+    { dni: '87654321', sap: '2595', nombre: 'VENDEDORA DEMO MERCADOS' }
+  ],
+  clientes: [
+    ['1018582','CARMEN ROSA QUISPE HUAMAN','41258963','AV UNIVERSITARIA 4520 LOS OLIVOS','987111222',-11.9782,-77.0705,'215'],
+    ['1018601','BODEGA EL SOL DE ORO EIRL','20601234567','JR LAS PERLAS 120 SMP','',-11.9915,-77.0841,'215'],
+    ['1018633','JUAN CARLOS MENDOZA RIVAS','10456789123','MZ B LT 7 PRO','951222333',-11.9450,-77.0760,'215'],
+    ['1018650','MINIMARKET LUCERITO SAC','20612345678','AV NARANJAL 980 LOS OLIVOS','',-11.9720,-77.0620,'215'],
+    ['1018702','ROSA ELVIRA TORRES CANO','09876543','CALLE LOS PINOS 45 COMAS','945666777',-11.9380,-77.0510,'215'],
+    ['1018720','PEDRO LUIS VILCA ROMERO','10089433968','MZ M LT 13 SECTOR 1 GRUPO 23','',-11.9600,-77.0480,'215'],
+    ['1018755','PANADERIA SAN MARTIN','20598765432','AV TUPAC AMARU 3300 COMAS','',-11.9300,-77.0550,'215'],
+    ['1018790','LUZ MARINA CHAVEZ PAREDES','44556677','JR AMAZONAS 210 INDEPENDENCIA','',-11.9930,-77.0560,'215'],
+    ['1018811','GLADYS ASCAYA RAMOS','07160768','SACSAYHUAMAN 398 INDEPENDENCIA','',-11.9782,-77.0470,'215'],
+    ['1018840','INVERSIONES DON PEPE EIRL','20605551112','AV IZAGUIRRE 1500 LOS OLIVOS','',-11.9890,-77.0750,'215'],
+    ['1018866','MARIA ELENA SOTO YEPEZ','74824261','CALLE 12 MZ F LT 3 SMP','',-11.9629,-77.0902,'215'],
+    ['1018899','ABARROTES LA ECONOMICA','10411223344','MCDO UNICACHI PTO 45','',-11.9500,-77.0700,'215'],
+    ['2020101','KAREN MARITE HUAYTA MELGAR','75613028','URB LOS CHASQUIS ET 2 MZ J LT 20','',-11.9910,-77.0966,'2595'],
+    ['2020140','CARLOS CERECEDA LOPEZ','10412568406','MERCADO CHASKI INT 58','',-11.9910,-77.0967,'2595'],
+    ['2020177','JOAN ERICK SOTO YEPEZ','74824262','MCDO 3 REGIONES PTO H11','',-11.8870,-77.0313,'2595'],
+    ['2020203','TEODORO ALEJANDRO DE LA CRUZ COSAR','40798143','MERCADO GLADYS CARRILLO PT19','',-11.9711,-77.0704,'2595'],
+    ['2020250','MERY ELENA AQUINO VALLEJO','46670011','MZ U LT 3 VALLE DE SHARON','',-12.1714,-76.9675,'2595'],
+    ['2020288','EMILIA SALAZAR SALINAS','43219876','JR HUANUCO 455 CERCADO','',-12.0351,-77.0430,'2595'],
+    ['2020301','DISTRIBUIDORA LUTHI SAC','20614060094','MCDO VALLE CHILLON PTO 128','',-11.8871,-77.0314,'2595'],
+    ['2020333','CRISTIAN TOLENTINO LEON','75521748','AV ANTISUYO 654','925553002',-11.9773,-77.0473,'2595'],
+    ['2020360','EDINSON HERMITANO DE LA ROSA','73444211','MCDO 3 REGIONES PTO H12','923830806',-11.8869,-77.0310,'2595'],
+    ['2020399','SONIA LUCY MAYLLE CONDORI','45678912','CALLE LAS ALMENDRAS 4100','',-11.9450,-77.0600,'2595'],
+    ['3030001','JORGE VICTOR VILCAS QUISPE','25632137','MCDO DULANTO PTO 29 CALLAO','',-12.0500,-77.1200,'10270'],
+    ['3030002','RONALD GABRIEL AYALA PUMA','70112233','AV PERU 2300 SMP','',-12.0250,-77.0800,'']
+  ].map(a => ({ cod: a[0], nombre: a[1], doc: a[2], dir: a[3], tel: a[4], lat: a[5], lon: a[6], vend: a[7] }))
+};
+const GRUPO_COR = 'tu grupo de CARTERA (ej. CARTERA MERCADOS / CARTERA AREQUIPA)';
+const GRUPO_BAJA = 'el grupo BAJAS DE CLIENTES - LA CALERA';
+
+const $ = id => document.getElementById(id);
+let V = null, cartera = [], selC = null, selB = null, nuevo = null, mapa = null, mkAct = null, mkNew = null;
+
+function ir(v) { ['vHome','vDni','vVend','vAdminLogin','vAdmin'].forEach(x => $(x).classList.toggle('hidden', x !== v)); $('main').classList.toggle('ancho', v === 'vAdmin'); window.scrollTo(0,0); }
+function temaActual() { const t = document.documentElement.dataset.theme; return t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+function pintarTema() { $('btnTema').textContent = temaActual() === 'dark' ? '☀ CLARO' : '☾ OSCURO'; }
+function cambiarTema() { const n = temaActual() === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = n; try { localStorage.setItem('cb-tema', n); } catch (e) {} pintarTema(); }
+try { const t = localStorage.getItem('cb-tema'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+pintarTema();
+function salir() { V = null; ir('vHome'); }
+function mascara(n) { return n.split(' ').filter(Boolean).slice(0, 2).map(w => w.slice(0, 3) + '***').join(' '); }
+
+function entrarVendedor() {
+  const d = $('dni').value.replace(/\D/g, '').padStart(8, '0');
+  if (!/^\d{8}$/.test(d) || /^0+$/.test(d)) { $('dniErr').textContent = 'Escribe un DNI de 8 dígitos.'; $('dniErr').classList.remove('hidden'); return; }
+  // DEMO: un DNI que no está en el padrón entra como el vendedor de prueba 215
+  V = DEMO.vendedores.find(v => v.dni === d) || DEMO.vendedores[0];
+  $('dniErr').classList.add('hidden');
+  cartera = DEMO.clientes.filter(c => c.vend === V.sap);
+  $('vSap').textContent = V.sap; $('vN').textContent = cartera.length;
+  limpiar('cor'); limpiar('baja'); tab('cor'); ir('vVend');
+  setTimeout(iniciarMapa, 50);
+}
+
+function tab(t) {
+  $('tCor').classList.toggle('on', t === 'cor'); $('tBaja').classList.toggle('on', t === 'baja');
+  $('fCor').classList.toggle('hidden', t !== 'cor'); $('fBaja').classList.toggle('hidden', t !== 'baja');
+  $('msgCard').classList.add('hidden');
+  if (t === 'cor' && mapa) setTimeout(() => mapa.invalidateSize(), 50);
+}
+
+function cambioTipo() {
+  const t = $('cTipo').value;
+  const asig = t === 'ASIGNACIÓN A MI CARTERA';
+  $('cClienteMio').classList.toggle('hidden', asig);
+  $('cClienteOtro').classList.toggle('hidden', !asig);
+  $('cUbReq').classList.toggle('hidden', t === 'CORRECCIÓN DE DATOS');
+  $('cTipoAyuda').textContent = {
+    'ACTUALIZACIÓN DE COORDENADAS': 'El cliente ya es tuyo, pero su punto en el mapa está mal.',
+    'ASIGNACIÓN A MI CARTERA': 'El cliente existe pero no está en tu cartera. Escribe su código, DNI o RUC.',
+    'CORRECCIÓN DE DATOS': 'Cambio de dirección, referencia o teléfono. La ubicación es opcional.'
+  }[t] || '';
+  if (asig) { selC = null; $('cSel').innerHTML = ''; dibujarActual(); }
+}
+
+function sugerir(p) {
+  const q = CORE.norm($(p + 'Busca').value);
+  const box = $(p + 'Sug');
+  if (q.length < 2) { box.classList.add('hidden'); return; }
+  const hits = cartera.filter(c => c.cod.includes(q) || CORE.norm(c.nombre).includes(q)).slice(0, 8);
+  box.innerHTML = hits.length ? hits.map(c => `<div onclick="elegir('${p}','${c.cod}')"><b>${c.cod}</b> · ${mascara(c.nombre)}<br><small>${c.dir}</small></div>`).join('') : '<div class="muted">Sin coincidencias en tu cartera</div>';
+  box.classList.remove('hidden');
+}
+function elegir(p, cod) {
+  const c = cartera.find(x => x.cod === cod);
+  if (p === 'c') selC = c; else selB = c;
+  $(p + 'Sug').classList.add('hidden'); $(p + 'Busca').value = '';
+  $(p + 'Sel').innerHTML = `<div class="sel"><span><b>${c.cod}</b> · ${mascara(c.nombre)}<br><small class="muted">${c.dir}</small></span><button class="gris" onclick="quitar('${p}')">Cambiar</button></div>`;
+  $(p + 'Busca').classList.add('hidden'); $(p + 'Busca').classList.remove('bad');
+  if (p === 'c') dibujarActual();
+}
+function quitar(p) { if (p === 'c') selC = null; else selB = null; $(p + 'Sel').innerHTML = ''; $(p + 'Busca').classList.remove('hidden'); if (p === 'c') dibujarActual(); }
+
+// ---------- Mapa ----------
+function iniciarMapa() {
+  if (mapa || typeof L === 'undefined') { if (mapa) mapa.invalidateSize(); return; }
+  mapa = L.map('map').setView([-11.98, -77.06], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+  mapa.on('click', e => { $('cUbic').value = e.latlng.lat.toFixed(6) + ', ' + e.latlng.lng.toFixed(6); leerUbic('MAPA'); });
+}
+function dibujarActual() {
+  if (!mapa) return;
+  if (mkAct) { mapa.removeLayer(mkAct); mkAct = null; }
+  if (selC && selC.lat) {
+    mkAct = L.circleMarker([selC.lat, selC.lon], { radius: 9, color: '#0f6b3f', fillColor: '#fff', fillOpacity: 1, weight: 3 }).addTo(mapa).bindTooltip('Punto actual');
+    mapa.setView([selC.lat, selC.lon], 16);
+  }
+  pintarNuevo();
+}
+function pintarNuevo() {
+  if (!mapa) return;
+  if (mkNew) { mapa.removeLayer(mkNew); mkNew = null; }
+  if (nuevo && nuevo.lat != null) {
+    mkNew = L.circleMarker([nuevo.lat, nuevo.lon], { radius: 9, color: '#2463c9', fillColor: '#2463c9', fillOpacity: .9 }).addTo(mapa).bindTooltip('Punto nuevo');
+    if (mkAct) mapa.fitBounds(L.latLngBounds([mkAct.getLatLng(), mkNew.getLatLng()]).pad(0.4), { maxZoom: 17 });
+    else mapa.setView([nuevo.lat, nuevo.lon], 17);
+  }
+}
+function leerUbic(origen) {
+  const v = $('cUbic').value.trim();
+  const c = CORE.leerCoords(v);
+  const info = $('cUbInfo');
+  nuevo = null;
+  if (!v) { info.textContent = ''; pintarNuevo(); return; }
+  if (c.lat != null) {
+    nuevo = { lat: c.lat, lon: c.lon, origen: origen || (c.link ? 'ENLACE' : 'COORDENADAS'), precision: nuevo && nuevo.precision };
+    let t = `✔ ${c.lat}, ${c.lon}`;
+    if (selC) { const d = CORE.distM(selC.lat, selC.lon, c.lat, c.lon); if (d != null) t += ` · a ${d >= 1000 ? (d / 1000).toFixed(1) + ' km' : d + ' m'} del punto actual`; }
+    info.innerHTML = t; info.className = 'pill ok';
+  } else if (c.corto) {
+    info.innerHTML = '⚠ Ese enlace corto no muestra la coordenada. Ábrelo en Google Maps, mantén presionado el punto y copia los números, o usa “Usar mi ubicación actual”.';
+    info.className = 'pill warn';
+  } else { info.textContent = '✖ No se reconoce una coordenada de Perú.'; info.className = 'pill err'; }
+  pintarNuevo();
+}
+function usarGPS() {
+  const info = $('cUbInfo');
+  if (!navigator.geolocation) { info.textContent = 'Este navegador no da ubicación.'; return; }
+  info.textContent = 'Buscando señal GPS…'; info.className = 'muted';
+  navigator.geolocation.getCurrentPosition(p => {
+    $('cUbic').value = p.coords.latitude.toFixed(6) + ', ' + p.coords.longitude.toFixed(6);
+    leerUbic('GPS');
+    nuevo.precision = Math.round(p.coords.accuracy);
+    $('cUbInfo').innerHTML += ` · precisión ${nuevo.precision} m` + (nuevo.precision > 50 ? ' (baja: espera unos segundos y vuelve a intentar)' : '');
+  }, e => { info.textContent = 'No se pudo obtener la ubicación: ' + e.message; info.className = 'pill err'; }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+}
+
+// ---------- Mensajes ----------
+function marcar(id, malo) { $(id).classList.toggle('bad', !!malo); return !malo; }
+function generar(t) {
+  let ok = true, L = [];
+  if (t === 'cor') {
+    const tipo = $('cTipo').value;
+    ok &= marcar('cTipo', !tipo);
+    const asig = tipo === 'ASIGNACIÓN A MI CARTERA';
+    if (asig) {
+      const id = $('cIdOtro').value.replace(/\D/g, '');
+      ok &= marcar('cIdOtro', ![7, 8, 11].includes(id.length));
+      ok &= marcar('cNomOtro', $('cNomOtro').value.trim().length < 3);
+    } else ok &= marcar('cBusca', !selC);
+    const necesitaUbic = tipo !== 'CORRECCIÓN DE DATOS';
+    ok &= marcar('cUbic', necesitaUbic && !nuevo);
+    const tel = $('cTel').value.replace(/\D/g, '');
+    ok &= marcar('cTel', tel && !/^9\d{8}$/.test(tel));
+    if (tipo === 'CORRECCIÓN DE DATOS' && !nuevo && !$('cDir').value.trim() && !tel && !$('cRef').value.trim()) { ok = false; marcar('cDir', true); }
+    if (!ok) return;
+    L.push('*CORRECCIÓN DE CLIENTE*', 'SOLICITUD: ' + tipo);
+    if (asig) {
+      const id = $('cIdOtro').value.replace(/\D/g, '');
+      L.push((id.length === 7 ? 'COD CLIENTE: ' : 'DOC CLIENTE: ') + id, 'NOMBRE CLIENTE: ' + $('cNomOtro').value.trim().toUpperCase());
+    } else L.push('COD CLIENTE: ' + selC.cod);
+    L.push('VENDEDOR (SAP): ' + V.sap);
+    if (nuevo) {
+      L.push('COORDENADAS: ' + nuevo.lat + ', ' + nuevo.lon, 'UBICACIÓN: https://maps.google.com/?q=' + nuevo.lat + ',' + nuevo.lon);
+      L.push('ORIGEN: ' + nuevo.origen + (nuevo.precision ? '' : ''));
+      if (nuevo.precision) L.push('PRECISIÓN GPS: ' + nuevo.precision + ' m');
+    }
+    if ($('cDir').value.trim()) L.push('DIRECCIÓN NUEVA: ' + $('cDir').value.trim().toUpperCase());
+    if ($('cRef').value.trim()) L.push('REFERENCIA: ' + $('cRef').value.trim().toUpperCase());
+    if (tel) L.push('TELÉFONO NUEVO: ' + tel);
+    if ($('cObs').value.trim()) L.push('OBS: ' + $('cObs').value.trim());
+    $('msgGrupo').textContent = 'Envíalo a ' + GRUPO_COR + '.';
+  } else {
+    const mot = $('bMot').value;
+    ok &= marcar('bBusca', !selB);
+    ok &= marcar('bMot', !mot);
+    if (mot === 'DOBLE CÓDIGO') ok &= marcar('bDoble', !/^\d{5,8}$/.test($('bDoble').value.trim()) || (selB && $('bDoble').value.trim() === selB.cod));
+    ok &= marcar('bObs', mot === 'OTRO' && $('bObs').value.trim().length < 5);
+    if (!ok) return;
+    L.push('*BAJA DE CLIENTE*', 'COD CLIENTE: ' + selB.cod, 'VENDEDOR (SAP): ' + V.sap, 'MOTIVO: ' + mot);
+    if (mot === 'DOBLE CÓDIGO') L.push('COD QUE SE QUEDA: ' + $('bDoble').value.trim());
+    if ($('bObs').value.trim()) L.push('OBS: ' + $('bObs').value.trim());
+    $('msgGrupo').textContent = 'Envíalo a ' + GRUPO_BAJA + '.';
+  }
+  const txt = L.join('\n');
+  $('msgTxt').textContent = txt;
+  $('msgWa').href = 'https://wa.me/?text=' + encodeURIComponent(txt);
+  $('msgCard').classList.remove('hidden'); $('copiado').classList.add('hidden');
+  $('msgCard').scrollIntoView({ behavior: 'smooth' });
+}
+function copiar() { navigator.clipboard.writeText($('msgTxt').textContent).then(() => $('copiado').classList.remove('hidden')).catch(() => {}); }
+function limpiar(t) {
+  if (t === 'cor') { ['cTipo','cIdOtro','cNomOtro','cUbic','cDir','cRef','cTel','cObs','cBusca'].forEach(i => { $(i).value = ''; $(i).classList.remove('bad'); }); quitar('c'); nuevo = null; $('cUbInfo').textContent = ''; cambioTipo(); pintarNuevo(); }
+  else { ['bMot','bDoble','bObs','bBusca'].forEach(i => { $(i).value = ''; $(i).classList.remove('bad'); }); quitar('b'); $('bDobleWrap').classList.add('hidden'); }
+  $('msgCard').classList.add('hidden');
+}
+
+// ---------- Administración ----------
+let CHATS = [], MAESTRO = null, R = null, rt = 'cor';
+function entrarAdmin() { if ($('pwd').value !== 'demo2026') { $('pwdErr').classList.remove('hidden'); return; } $('pwdErr').classList.add('hidden'); ir('vAdmin'); }
+$('fChat').addEventListener('change', async e => {
+  CHATS = [];
+  for (const f of e.target.files) {
+    if (/\.zip$/i.test(f.name)) {
+      const z = await JSZip.loadAsync(f);
+      for (const n of Object.keys(z.files)) if (/\.txt$/i.test(n)) CHATS.push({ nombre: f.name, texto: await z.files[n].async('string') });
+    } else CHATS.push({ nombre: f.name, texto: await f.text() });
+  }
+  $('chatInfo').textContent = CHATS.length ? CHATS.map(c => c.nombre).join(', ') : 'No se encontró ningún .txt dentro.';
+  $('btnProc').disabled = !CHATS.length;
+});
+$('fMae').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
+  MAESTRO = leerMaestro(wb);
+  $('maeInfo').textContent = MAESTRO.info;
+});
+function leerMaestro(wb) {
+  const N = s => CORE.norm(String(s || ''));
+  const cand = { cod: ['COD DESTINATARIO','COD CLIENTE','CODIGO CLIENTE','CODIGO','COD'], nombre: ['NOMBRE','NOMBRE CLIENTE','RAZON SOCIAL','CLIENTE','DESTINATARIO'],
+    doc: ['NUM DOCUMENTO','NRO DOCUMENTO','DOCUMENTO','RUC','DNI RUC','DNI'], lat: ['Y','LATITUD','LAT','COORDY'], lon: ['X','LONGITUD','LONG','LON','COORDX'],
+    vend: ['COD VENDEDOR','SAP VENDEDOR','VENDEDOR SAP','SAP'], dir: ['DIRECCION','DIRECCION FISCAL','DOMICILIO'], tel: ['TELEFONO','CELULAR','TELF','CEL','MOVIL'] };
+  let best = null;
+  for (const sn of wb.SheetNames) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+    for (let h = 0; h < Math.min(20, rows.length); h++) {
+      const hdr = rows[h].map(N); const col = {};
+      for (const k in cand) { let i = -1; for (const c of cand[k]) { i = hdr.indexOf(c); if (i >= 0) break; } if (i < 0) i = hdr.findIndex(x => cand[k].some(c => x.startsWith(c + ' ') || x === c)); col[k] = i; }
+      if (col.cod >= 0 && col.nombre >= 0) { const sc = Object.values(col).filter(i => i >= 0).length; if (!best || sc > best.sc) best = { sn, h, col, rows, sc }; break; }
+    }
+  }
+  if (!best) return { clientes: [], info: '✖ No se encontró una hoja con código y nombre de cliente.' };
+  const { col, rows, h } = best;
+  const g = (r, k) => col[k] >= 0 ? r[col[k]] : '';
+  const clientes = rows.slice(h + 1).filter(r => g(r, 'cod')).map(r => {
+    let lat = parseFloat(g(r, 'lat')), lon = parseFloat(g(r, 'lon'));
+    if (!isNaN(lat) && !isNaN(lon) && Math.abs(lat) > Math.abs(lon)) [lat, lon] = [lon, lat];
+    return { cod: String(g(r, 'cod')).trim(), nombre: String(g(r, 'nombre')), doc: String(g(r, 'doc')).replace(/\D/g, ''), lat: isNaN(lat) ? null : lat, lon: isNaN(lon) ? null : lon,
+      vend: String(g(r, 'vend')).replace(/\D/g, ''), dir: String(g(r, 'dir')), tel: String(g(r, 'tel')) };
+  });
+  const falt = ['doc','lat','vend','dir'].filter(k => col[k] < 0);
+  return { clientes, info: `✔ Hoja "${best.sn}": ${clientes.length} clientes.` + (falt.length ? ' Sin columna de: ' + falt.join(', ') + '.' : '') };
+}
+
+function procesar() {
+  let msgs = [];
+  for (const c of CHATS) msgs = msgs.concat(CORE.parseChat(c.texto, c.nombre));
+  msgs.sort((a, b) => a.fecha - b.fecha);
+  // quitar duplicados por reexportar
+  const k = new Set(); msgs = msgs.filter(m => { const x = +m.fecha + '|' + m.autor + '|' + m.texto.slice(0, 80); if (k.has(x)) return false; k.add(x); return true; });
+  const d = $('fDesde').value ? new Date($('fDesde').value + 'T00:00') : null, h = $('fHasta').value ? new Date($('fHasta').value + 'T23:59:59') : null;
+  msgs = msgs.filter(m => (!d || m.fecha >= d) && (!h || m.fecha <= h));
+  const { sol, noLeidos } = CORE.solicitudes(msgs);
+  const cl = MAESTRO ? MAESTRO.clientes : DEMO.clientes;
+  const vend = MAESTRO ? [] : DEMO.vendedores.map(v => v.sap).concat(['10270']);
+  CORE.validar(sol, cl, vend);
+  R = { cor: sol.filter(s => s.tipo !== 'BAJA'), baja: sol.filter(s => s.tipo === 'BAJA'), no: noLeidos };
+  const conAl = sol.filter(s => s.alertas.length).length;
+  $('kpis').innerHTML = [
+    ['Correcciones', R.cor.length], ['Bajas', R.baja.length], ['Con alertas', conAl], ['Por formulario', sol.filter(s => s.formato === 'FORMULARIO').length],
+    ['Atendidas según chat', sol.filter(s => s.atendido).length], ['No leídos', R.no.length]
+  ].map(([a, b], i) => `<div class="kpi ${['g','g','w','','','c'][i]}"><b>${b}</b><span>${a}</span></div>`).join('');
+  $('res').classList.remove('hidden'); rtab(rt);
+}
+const fF = d => d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const fH = d => d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+function filasCor() {
+  return R.cor.map((r, i) => ({
+    '#': i + 1, FECHA: fF(r.fecha), HORA: fH(r.fecha), 'ENVIADO POR': r.autor, TIPO: r.tipo, 'COD CLIENTE': r.m ? r.m.cod : r.codCli, 'DOC CLIENTE': r.m ? r.m.doc : r.doc,
+    CLIENTE: r.m ? r.m.nombre : r.nombreChat, 'CLIENTE (CHAT)': r.nombreChat, 'MÉTODO DE CRUCE': r.cruce, 'VENDEDOR SAP': r.vend, 'VENDEDOR ACTUAL (MAESTRO)': r.m ? r.m.vend : '',
+    'LAT ACTUAL': r.m ? r.m.lat : '', 'LONG ACTUAL': r.m ? r.m.lon : '', 'LAT NUEVA': r.lat ?? '', 'LONG NUEVA': r.lon ?? '', 'DISTANCIA (m)': r.dist ?? '',
+    'PRECISIÓN GPS': r.precision, ENLACE: r.link, 'DIRECCIÓN ACTUAL': r.m ? r.m.dir : '', 'DIRECCIÓN NUEVA': r.dir, REFERENCIA: r.ref, 'TELÉFONO ACTUAL': r.m ? r.m.tel : '',
+    'TELÉFONO NUEVO': r.tel, OBS: r.obs, FORMATO: r.formato, 'ATENDIDO (CHAT)': r.atendido, 'ATENDIDO POR': r.atendidoPor, REENVÍO: r.reenvio || '', ALERTAS: r.alertas.join(' · '), 'TEXTO ORIGINAL': r.texto, ARCHIVO: r.archivo
+  }));
+}
+function filasBaja() {
+  return R.baja.map((r, i) => ({
+    '#': i + 1, FECHA: fF(r.fecha), HORA: fH(r.fecha), 'ENVIADO POR': r.autor, 'COD CLIENTE': r.m ? r.m.cod : r.codCli, CLIENTE: r.m ? r.m.nombre : r.nombreChat,
+    DOCUMENTO: r.m ? r.m.doc : r.doc, DIRECCIÓN: r.m ? r.m.dir : '', 'VENDEDOR SAP': r.vend, MOTIVO: r.motivo, 'COD QUE SE QUEDA': r.codQueda, OBS: r.obs,
+    FORMATO: r.formato, 'ATENDIDO (CHAT)': r.atendido, REENVÍO: r.reenvio || '', ALERTAS: r.alertas.join(' · '), 'TEXTO ORIGINAL': r.texto, ARCHIVO: r.archivo
+  }));
+}
+function filasNo() { return R.no.map((r, i) => ({ '#': i + 1, FECHA: fF(r.fecha), HORA: fH(r.fecha), 'ENVIADO POR': r.autor, MOTIVO: r.motivo, TEXTO: r.texto })); }
+function rtab(t) {
+  rt = t; ['cor','baja','no'].forEach(x => $('rt' + { cor: 'Cor', baja: 'Baja', no: 'No' }[x]).classList.toggle('on', x === t));
+  const filas = t === 'cor' ? filasCor() : t === 'baja' ? filasBaja() : filasNo();
+  const ver = t === 'cor' ? ['#','FECHA','ENVIADO POR','TIPO','COD CLIENTE','CLIENTE','VENDEDOR SAP','LAT NUEVA','LONG NUEVA','DISTANCIA (m)','ATENDIDO (CHAT)','ALERTAS']
+    : t === 'baja' ? ['#','FECHA','ENVIADO POR','COD CLIENTE','CLIENTE','VENDEDOR SAP','MOTIVO','ATENDIDO (CHAT)','ALERTAS'] : ['#','FECHA','ENVIADO POR','MOTIVO','TEXTO'];
+  const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  $('tbl').innerHTML = '<tr>' + ver.map(c => `<th>${c}</th>`).join('') + '</tr>' + (filas.length ? filas.map(f => '<tr>' + ver.map(c => `<td class="${c === 'ALERTAS' ? 'al' : /COD|LAT|LONG|DIST|FECHA|SAP|#/.test(c) ? 'num' : ''}">${c === 'TEXTO' ? '<small>' + esc(f[c]).slice(0, 220) + '</small>' : esc(f[c])}</td>`).join('') + '</tr>').join('') : `<tr><td colspan="${ver.length}" class="muted">Sin registros</td></tr>`);
+}
+function excel(t) {
+  if (!R) return;
+  const wb = XLSX.utils.book_new();
+  const filas = t === 'cor' ? filasCor() : filasBaja();
+  const ws = XLSX.utils.json_to_sheet(filas.length ? filas : [{ AVISO: 'Sin registros' }]);
+  ws['!cols'] = Object.keys(filas[0] || { a: 1 }).map(k => ({ wch: /TEXTO/.test(k) ? 60 : /CLIENTE$|ALERTAS|DIRECC|ENLACE|ENVIADO/.test(k) ? 32 : 14 }));
+  XLSX.utils.book_append_sheet(wb, ws, t === 'cor' ? 'CORRECCIONES' : 'BAJAS');
+  // Resumen por quién envió
+  const lista = t === 'cor' ? R.cor : R.baja, res = {};
+  for (const r of lista) { const k = r.autor; res[k] = res[k] || { 'ENVIADO POR': k, SOLICITUDES: 0, 'CON ALERTA': 0, 'ATENDIDAS (CHAT)': 0, 'POR FORMULARIO': 0 }; res[k].SOLICITUDES++; if (r.alertas.length) res[k]['CON ALERTA']++; if (r.atendido) res[k]['ATENDIDAS (CHAT)']++; if (r.formato === 'FORMULARIO') res[k]['POR FORMULARIO']++; }
+  const rs = Object.values(res).sort((a, b) => b.SOLICITUDES - a.SOLICITUDES);
+  rs.push({}, { 'ENVIADO POR': 'TOTAL', SOLICITUDES: lista.length, 'CON ALERTA': lista.filter(r => r.alertas.length).length }, {}, { 'ENVIADO POR': 'Generado: ' + new Date().toLocaleString('es-PE') + ' · Área de GPS – La Calera' });
+  const w2 = XLSX.utils.json_to_sheet(rs); w2['!cols'] = [{ wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, w2, 'RESUMEN');
+  if (t === 'cor' && R.no.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(filasNo()), 'NO LEIDOS');
+  const hoy = new Date(), dd = String(hoy.getDate()).padStart(2, '0') + '.' + String(hoy.getMonth() + 1).padStart(2, '0') + '.' + String(hoy.getFullYear()).slice(2);
+  XLSX.writeFile(wb, (t === 'cor' ? 'CORRECCIONES_CLIENTES_' : 'BAJAS_CLIENTES_') + dd + '.xlsx');
+}
+
+// ---------- Chat de ejemplo ----------
+function cargarEjemplo() {
+  CHATS = [{ nombre: 'chat_ejemplo.txt', texto: `[11/24/26, 8:10:02 AM] Vendedor Demo Norte (215): *CORRECCIÓN DE CLIENTE*
+SOLICITUD: ACTUALIZACIÓN DE COORDENADAS
+COD CLIENTE: 1018720
+VENDEDOR (SAP): 215
+COORDENADAS: -11.960412, -77.049133
+UBICACIÓN: https://maps.google.com/?q=-11.960412,-77.049133
+ORIGEN: GPS
+PRECISIÓN GPS: 8 m
+DIRECCIÓN NUEVA: MZ M LT 13 SECTOR 1 GRUPO 23 VILLA EL SALVADOR
+[11/24/26, 8:15:40 AM] Vendedor Demo Norte (215): *BAJA DE CLIENTE*
+COD CLIENTE: 1018755
+VENDEDOR (SAP): 215
+MOTIVO: CIERRE DEFINITIVO
+OBS: Local alquilado a otro rubro
+[11/24/26, 9:02:11 AM] Delia Chavez Alvis AQP (434): Solicitud: Actualizacion de coordenadas:
+Cliente: Rosa Elvira Torres 09876543
+Venderdor: 215
+Coordenadas :
+https://maps.app.goo.gl/32mKt3Tw55aKhv277?g_st=ac
+[11/24/26, 9:20:00 AM] @Mariacalerahuevos: *Solicitud: Actualización de coordenadas
+*Cliente: 40798143
+*Vendedor: 2595
+[11/24/26, 9:20:10 AM] @Mariacalerahuevos: Ubicación: -11.9712871, -77.070912 - https://maps.google.com/?q=-11.9712871,-77.070912
+[11/24/26, 9:31:00 AM] Juan Carlos Acosta: Pasar a mi cartera
+Cliente Jorge Victor vilcas quispe
+[11/24/26, 9:31:20 AM] Juan Carlos Acosta: Dni 25632137
+[11/24/26, 9:31:40 AM] Juan Carlos Acosta: Código vendedor 10270
+[11/24/26, 9:32:00 AM] Juan Carlos Acosta: Ubicación: -12.0501, -77.1199 - https://maps.google.com/?q=-12.0501,-77.1199
+[11/24/26, 10:05:12 AM] 🔰 Mercedes Rios: procesado
+[11/24/26, 10:40:00 AM] Vendedora Demo Mercados: *CORRECCIÓN DE CLIENTE*
+SOLICITUD: ASIGNACIÓN A MI CARTERA
+DOC CLIENTE: 70112233
+NOMBRE CLIENTE: RONALD GABRIEL AYALA PUMA
+VENDEDOR (SAP): 2595
+COORDENADAS: -12.025312, -77.080241
+UBICACIÓN: https://maps.google.com/?q=-12.025312,-77.080241
+ORIGEN: GPS
+PRECISIÓN GPS: 15 m
+[11/24/26, 11:00:00 AM] MERC Jimmy Cordova Moreno: SOLICITUD DE ALTA
+DNI: 73444299
+Edinson Ejemplo
+VEND: JIMMY CORDOVA
+Cod. 15964
+[11/24/26, 11:30:00 AM] Saby: Xfavor dar de baja cliente 2020288 emilia salazar
+Motivo: doble codigo
+Vendedor 2595
+[11/24/26, 4:31:06 PM] 🔰 Ariana Cañote: SOLICITUDES PROCESADAS
+[11/25/26, 8:05:00 AM] Vendedor Demo Norte (215): *CORRECCIÓN DE CLIENTE*
+SOLICITUD: ACTUALIZACIÓN DE COORDENADAS
+COD CLIENTE: 1018720
+VENDEDOR (SAP): 215
+COORDENADAS: -11.960500, -77.049200
+UBICACIÓN: https://maps.google.com/?q=-11.9605,-77.0492
+ORIGEN: MAPA
+[11/25/26, 8:40:00 AM] Vendedora Demo Mercados: *CORRECCIÓN DE CLIENTE*
+SOLICITUD: CORRECCIÓN DE DATOS
+COD CLIENTE: 2020333
+VENDEDOR (SAP): 2595
+TELÉFONO NUEVO: 912345678
+REFERENCIA: FRENTE AL PARQUE ZONAL` }];
+  $('chatInfo').textContent = 'chat_ejemplo.txt (11 solicitudes de ejemplo)';
+  $('btnProc').disabled = false;
+}
+</script>
+</body>
+</html>
